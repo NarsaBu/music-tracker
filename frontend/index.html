@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Music Tracker</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Share+Tech+Mono&display=swap"
+    />
+    <script>
+      // Apply the theme before first paint to avoid a flash (see src/app/theme).
+      (function () {
+        var t = null;
+        try {
+          t = localStorage.getItem('mt-theme');
+        } catch (e) {}
+        if (t !== 'day' && t !== 'night') {
+          t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day';
+        }
+        document.documentElement.dataset.theme = t;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

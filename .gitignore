@@ -48,6 +48,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Storybook
+frontend/storybook-static/
+
 # Playwright
 frontend/test-results/
 frontend/playwright-report/

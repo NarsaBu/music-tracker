@@ -1,0 +1,36 @@
+.lcd {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--font-display);
+  color: var(--text-display);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 6px color-mix(in srgb, var(--text-display) 70%, transparent);
+  background:
+    var(--texture-glass),
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 18%) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 40%, var(--surface-display-hi), var(--surface-display));
+  border: 2px solid #050505;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 2px 6px rgb(0 0 0 / 80%),
+    0 1px 0 var(--text-engraved-highlight);
+}
+
+.sm {
+  padding: 2px var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.md {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-md);
+}
+
+.lg {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-xl);
+}

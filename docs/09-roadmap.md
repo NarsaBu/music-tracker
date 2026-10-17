@@ -1,13 +1,13 @@
 # 09 — Roadmap
 
-## Этап 0. Каркас
-- [ ] Монорепо: `backend/`, `frontend/`, `docker-compose.yml`, `Makefile`
-- [ ] Backend: `cmd/tracker`, config, slog, chi, `/healthz`, golang-migrate, sqlc
-- [ ] Frontend: Vite + React + TS, роутер, `HttpClient`
-- [ ] Дизайн-токены, шрифты, текстуры; Storybook
-- [ ] UI-кит: Panel, PushButton, ToggleSwitch, RotarySelector, Led, LcdDisplay, EngravedInput
-- [ ] Layout «стойки», эталонная страница для утверждения стиля
-- [ ] CI: lint + test для обеих частей
+## Этап 0. Каркас ✅
+- [x] Монорепо: `backend/`, `frontend/`, `docker-compose.yml`, `Makefile`
+- [x] Backend: `cmd/tracker` (serve, migrate, hash-password), config, slog, chi, `/healthz`, `/readyz`, golang-migrate (встроенные миграции), sqlc
+- [x] Frontend: Vite + React + TS, роутер, `HttpClient`
+- [x] Дизайн-токены, шрифты, текстуры, ночная тема; Storybook
+- [x] UI-кит: Panel, PushButton, ToggleSwitch, RotarySelector, Led, LcdDisplay, EngravedInput
+- [x] Layout «стойки», эталонная страница «Настройки» (локальное состояние)
+- [x] CI: lint + test для обеих частей
 
 ## Этап 1. MusicBrainz и подписки
 - [ ] `adapter/musicbrainz`: клиент, rate limiter, retry, фикстуры
@@ -38,7 +38,6 @@
 
 ## Этап 5. Прод
 - [ ] Вход по паролю, cookie-сессия, CSRF, rate limit на вход
-- [ ] Ночная тема
 - [ ] Метрики Prometheus, дашборд
 - [ ] Docker-образы, деплой
 - [ ] e2e-тесты Playwright

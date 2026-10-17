@@ -1,0 +1,11 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "rules": {
+    "selector-class-pattern": "^[a-z][a-zA-Z0-9]*$",
+    "custom-property-pattern": null,
+    "custom-property-empty-line-before": null,
+    "no-descending-specificity": null,
+    "value-keyword-case": "lower",
+    "selector-pseudo-class-no-unknown": [true, { "ignorePseudoClasses": ["global"] }]
+  }
+}

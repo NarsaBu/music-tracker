@@ -1,0 +1,81 @@
+import type { PrimaryType, SecondaryType } from '@/entities/release/model';
+
+export type DigestFrequency = 'daily' | 'weekly';
+/** 0 = Sunday … 6 = Saturday, same as the backend. */
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface ReleaseFilterSettings {
+  primaryTypes: PrimaryType[];
+  excludedSecondaryTypes: SecondaryType[];
+  includeFeatured: boolean;
+  notifyAnnouncements: boolean;
+}
+
+export interface DigestSettings {
+  frequency: DigestFrequency;
+  weekday: Weekday;
+  /** HH:MM in `timezone`. */
+  time: string;
+  timezone: string;
+}
+
+export interface Settings {
+  filters: ReleaseFilterSettings;
+  email: { enabled: boolean; to: string; digest: DigestSettings };
+  rss: { enabled: boolean; feedUrl: string };
+}
+
+/** Mirrors the database defaults (backend/migrations/000001_init.up.sql). */
+export const DEFAULT_SETTINGS: Settings = {
+  filters: {
+    primaryTypes: ['album', 'ep', 'single'],
+    excludedSecondaryTypes: [
+      'Compilation',
+      'DJ-mix',
+      'Interview',
+      'Spokenword',
+      'Audiobook',
+      'Audio drama',
+      'Demo',
+      'Field recording',
+    ],
+    includeFeatured: false,
+    notifyAnnouncements: true,
+  },
+  email: {
+    enabled: false,
+    to: '',
+    digest: { frequency: 'daily', weekday: 5, time: '09:00', timezone: 'UTC' },
+  },
+  rss: { enabled: true, feedUrl: '' },
+};
+
+export const WEEKDAYS: ReadonlyArray<{ value: Weekday; short: string }> = [
+  { value: 1, short: 'Пн' },
+  { value: 2, short: 'Вт' },
+  { value: 3, short: 'Ср' },
+  { value: 4, short: 'Чт' },
+  { value: 5, short: 'Пт' },
+  { value: 6, short: 'Сб' },
+  { value: 0, short: 'Вс' },
+];
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export interface SettingsErrors {
+  emailTo?: string;
+}
+
+/** Business validation shared by every form that edits Settings. */
+export function validateSettings(s: Settings): SettingsErrors {
+  const errors: SettingsErrors = {};
+  if (s.email.enabled && !EMAIL_RE.test(s.email.to.trim())) {
+    errors.emailTo = 'Укажите корректный адрес';
+  }
+  return errors;
+}
+
+/** Adds the item when absent, removes it when present. */
+export function toggleItem<T>(list: readonly T[], item: T): T[] {
+  return list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
+}

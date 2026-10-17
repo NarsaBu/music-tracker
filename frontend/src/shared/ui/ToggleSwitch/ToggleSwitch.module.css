@@ -1,0 +1,116 @@
+.root {
+  position: relative;
+  display: inline-flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: var(--hit-target);
+  cursor: pointer;
+}
+
+.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* The native checkbox stays in the DOM for keyboard and screen readers. */
+.input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: inherit;
+  opacity: 0;
+}
+
+.switch {
+  display: grid;
+  grid-template-rows: auto 48px auto;
+  justify-items: center;
+  flex: none;
+  width: 36px;
+}
+
+.mark {
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--text-engraved-muted);
+  text-shadow: var(--text-shadow-engraved);
+}
+
+/* hex nut + bushing */
+.nut {
+  position: relative;
+  align-self: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #555 0 4px, transparent 5px),
+    conic-gradient(from 30deg, #ddd, #888, #eee, #777, #ccc, #666, #ddd);
+  box-shadow:
+    0 2px 3px rgb(0 0 0 / 50%),
+    inset 0 0 0 1px rgb(0 0 0 / 30%);
+}
+
+/* chrome lever: points down (off) or up (on) from the nut centre */
+.lever {
+  position: absolute;
+  bottom: 50%;
+  left: calc(50% - 4px);
+  width: 8px;
+  height: 15px;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(90deg, #6e6e6e, #f5f5f5 40%, #a0a0a0 70%, #5d5d5d);
+  box-shadow: 0 2px 3px rgb(0 0 0 / 45%);
+  transform: rotate(180deg) scaleY(0.85);
+  transform-origin: 50% 100%;
+  transition: transform var(--dur-med) var(--ease-mech);
+}
+
+.lever::after {
+  position: absolute;
+  top: -3px;
+  left: -1px;
+  width: 10px;
+  height: 10px;
+  content: '';
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #9a9a9a 60%, #555);
+}
+
+.input:checked + .switch .lever {
+  transform: rotate(0deg) scaleY(1);
+}
+
+.input:focus-visible + .switch .nut {
+  box-shadow: var(--focus-ring);
+}
+
+.text {
+  display: grid;
+  gap: 2px;
+}
+
+.label {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--text-engraved);
+  text-shadow: var(--text-shadow-engraved);
+}
+
+.description {
+  font-size: var(--text-xs);
+  color: var(--text-engraved-muted);
+}

@@ -15,6 +15,29 @@
 | Frontend | React + TypeScript (Vite), MVC                    |
 | Внешнее  | MusicBrainz Web Service v2, Cover Art Archive, SMTP |
 
+## Быстрый старт
+
+Нужны Go 1.26+, Node 24+, Docker.
+
+```bash
+make setup          # зависимости + .env из .env.example (укажите MB_USER_AGENT)
+make db             # postgres + mailpit в docker
+make run-backend    # API на :8080, миграции применяются при старте
+make run-frontend   # UI на http://localhost:5173
+```
+
+Весь стек в Docker: `make up` → UI на http://localhost:3000, письма — http://localhost:8025.
+
+Прочее: `make help` (тесты, линтеры, миграции, sqlc, Storybook, `hash-password`).
+
+## Структура
+
+```
+backend/    Go: cmd/tracker, internal/{domain,usecase,adapter,infrastructure}, migrations, queries
+frontend/   React: src/{app,shared,entities,features}
+docs/       документация
+```
+
 ## Документация
 
 | Документ | Содержание |

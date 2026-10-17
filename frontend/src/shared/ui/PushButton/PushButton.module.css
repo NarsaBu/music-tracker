@@ -1,0 +1,61 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--hit-target);
+  padding: 0 var(--space-6);
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: var(--radius-control);
+  transition:
+    transform var(--dur-fast),
+    box-shadow var(--dur-fast);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: var(--bevel-pressed);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--bevel-raised), var(--focus-ring);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.primary {
+  color: var(--text-on-plastic);
+  background: linear-gradient(180deg, var(--surface-plastic-hi), var(--surface-plastic) 60%);
+  border: 1px solid #000;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 18%),
+    0 3px 0 #000,
+    0 5px 8px rgb(0 0 0 / 45%);
+}
+
+.primary:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 4px rgb(0 0 0 / 70%),
+    0 0 0 #000,
+    0 1px 2px rgb(0 0 0 / 45%);
+}
+
+.secondary {
+  color: var(--text-engraved);
+  text-shadow: var(--text-shadow-engraved);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / 45%), transparent 70%),
+    linear-gradient(180deg, var(--surface-panel-hi), var(--surface-panel-lo));
+  border: 1px solid var(--surface-panel-edge);
+  box-shadow: var(--bevel-raised);
+}

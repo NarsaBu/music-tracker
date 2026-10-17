@@ -1,0 +1,87 @@
+.panel {
+  position: relative;
+  padding: var(--space-6) var(--space-8);
+  background: var(--texture-brushed);
+  border: 1px solid var(--surface-panel-edge);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--bevel-raised), var(--shadow-object);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
+
+  /* engraved separator line */
+  border-bottom: 1px solid rgb(0 0 0 / 22%);
+  box-shadow: 0 1px 0 var(--text-engraved-highlight);
+}
+
+.title {
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--text-engraved);
+  text-shadow: var(--text-shadow-engraved);
+}
+
+.extra {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.screw {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background:
+    linear-gradient(
+      var(--screw-angle, 35deg),
+      transparent 44%,
+      rgb(0 0 0 / 55%) 45% 55%,
+      transparent 56%
+    ),
+    radial-gradient(circle at 35% 30%, var(--surface-panel-hi), var(--surface-panel-lo) 70%);
+  box-shadow:
+    inset 0 -1px 1px rgb(0 0 0 / 40%),
+    0 1px 0 var(--text-engraved-highlight);
+}
+
+.tl {
+  top: 8px;
+  left: 8px;
+}
+
+.tr {
+  top: 8px;
+  right: 8px;
+
+  --screw-angle: 110deg;
+}
+
+.bl {
+  bottom: 8px;
+  left: 8px;
+
+  --screw-angle: 70deg;
+}
+
+.br {
+  bottom: 8px;
+  right: 8px;
+
+  --screw-angle: 160deg;
+}
+
+@media (width < 768px) {
+  .panel {
+    padding: var(--space-6) var(--space-4);
+  }
+}

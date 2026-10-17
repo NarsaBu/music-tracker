@@ -1,0 +1,55 @@
+.led {
+  --led-color: var(--led-off);
+
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    rgb(255 255 255 / 55%) 0 12%,
+    var(--led-color) 45%
+  );
+  box-shadow:
+    0 0 0 2px var(--surface-plastic),
+    0 1px 0 2px var(--text-engraved-highlight);
+  transition:
+    background var(--dur-fast),
+    box-shadow var(--dur-fast);
+}
+
+.off {
+  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 18%) 0 12%, var(--led-off) 45%);
+}
+
+.on {
+  --led-color: var(--led-on);
+}
+
+.ok {
+  --led-color: var(--led-ok);
+}
+
+.warn {
+  --led-color: var(--led-warn);
+}
+
+.on,
+.ok,
+.warn {
+  box-shadow:
+    0 0 0 2px var(--surface-plastic),
+    0 0 6px 1px var(--led-color),
+    0 0 14px 2px color-mix(in srgb, var(--led-color) 60%, transparent);
+}
+
+.blink {
+  animation: blink 1.2s steps(1, end) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
