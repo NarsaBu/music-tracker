@@ -68,8 +68,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		writeProblem(w, r, http.StatusNotFound, "Not found", err.Error())
 	case errors.Is(err, domain.ErrAlreadyExists):
 		writeProblem(w, r, http.StatusConflict, "Already exists", err.Error())
-	case errors.Is(err, domain.ErrUnauthorized):
-		writeProblem(w, r, http.StatusUnauthorized, "Unauthorized", "")
+	case errors.Is(err, domain.ErrConflict):
+		writeProblem(w, r, http.StatusConflict, "Conflict", err.Error())
 	case errors.Is(err, domain.ErrUpstreamUnavailable):
 		writeProblem(w, r, http.StatusServiceUnavailable, "Upstream unavailable", err.Error())
 	default:
@@ -86,7 +86,7 @@ func respondError(log *slog.Logger, w http.ResponseWriter, r *http.Request, err 
 	}
 	switch {
 	case errors.Is(err, domain.ErrValidation), errors.Is(err, domain.ErrNotFound),
-		errors.Is(err, domain.ErrAlreadyExists), errors.Is(err, domain.ErrUnauthorized):
+		errors.Is(err, domain.ErrAlreadyExists), errors.Is(err, domain.ErrConflict):
 	case errors.Is(err, domain.ErrUpstreamUnavailable), errors.Is(err, context.Canceled):
 		log.LogAttrs(r.Context(), slog.LevelWarn, "request failed", attrs...)
 	default:

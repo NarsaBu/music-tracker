@@ -104,3 +104,59 @@ export function feedReleaseWire(n: number, extra: Record<string, unknown> = {}) 
     ...extra,
   };
 }
+
+type ImportCounts = Partial<
+  Record<'pending' | 'matched' | 'needs_review' | 'not_found' | 'skipped' | 'failed', number>
+>;
+
+/** An import whose total is the sum of the given counts; finished when nothing is pending. */
+export function importJobWire(counts: ImportCounts, id = 'job-1', filename = 'artists.txt') {
+  const all = {
+    pending: 0,
+    matched: 0,
+    needs_review: 0,
+    not_found: 0,
+    skipped: 0,
+    failed: 0,
+    ...counts,
+  };
+  const total = Object.values(all).reduce((a, b) => a + b, 0);
+  return {
+    id,
+    filename,
+    total,
+    counts: all,
+    finished: all.pending === 0,
+    created_at: '2026-10-17T06:00:00Z',
+    finished_at: all.pending === 0 ? '2026-10-17T06:02:00Z' : null,
+  };
+}
+
+/** A needs_review line with two namesakes. */
+export function importItemWire(id: string, raw: string, extra: Record<string, unknown> = {}) {
+  const candidate = (mbid: string, disambiguation: string, country: string, begin: string) => ({
+    mbid,
+    name: raw,
+    sort_name: raw,
+    disambiguation,
+    type: 'Group',
+    country,
+    life_span: { begin, end: null, ended: false },
+    score: 100,
+  });
+  return {
+    id,
+    line_no: 2,
+    raw_value: raw,
+    input_mbid: null,
+    include_featured: null,
+    status: 'needs_review',
+    candidates: [
+      candidate('5b11f4ce-a62d-471e-81fc-a69a8278c7da', '90s US grunge band', 'US', '1987'),
+      candidate('9282c8b4-ca0b-4c6b-b7e3-4f7762dfc4d6', '60s band from the UK', 'GB', '1965'),
+    ],
+    artist: null,
+    error: null,
+    ...extra,
+  };
+}

@@ -11,14 +11,14 @@ export interface HttpClient {
   post<S extends z.ZodType>(path: string, body: unknown, schema: S): Promise<z.infer<S>>;
   put<S extends z.ZodType>(path: string, body: unknown, schema: S): Promise<z.infer<S>>;
   patch<S extends z.ZodType>(path: string, body: unknown, schema: S): Promise<z.infer<S>>;
+  /** multipart/form-data upload, e.g. an import file. */
+  postForm<S extends z.ZodType>(path: string, form: FormData, schema: S): Promise<z.infer<S>>;
   delete(path: string): Promise<void>;
 }
 
 export interface FetchHttpClientOptions {
   baseUrl?: string;
   fetchImpl?: typeof fetch;
-  /** Called on any 401, e.g. to redirect to the login screen. */
-  onUnauthorized?: () => void;
 }
 
 interface ProblemBody {
@@ -30,13 +30,11 @@ interface ProblemBody {
 export class FetchHttpClient implements HttpClient {
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
-  private readonly onUnauthorized?: () => void;
 
-  constructor({ baseUrl = '', fetchImpl, onUnauthorized }: FetchHttpClientOptions = {}) {
+  constructor({ baseUrl = '', fetchImpl }: FetchHttpClientOptions = {}) {
     this.baseUrl = baseUrl;
     // Bind lazily so tests can stub globalThis.fetch after construction.
     this.fetchImpl = fetchImpl ?? ((...args) => globalThis.fetch(...args));
-    this.onUnauthorized = onUnauthorized;
   }
 
   get<S extends z.ZodType>(path: string, schema: S) {
@@ -53,6 +51,10 @@ export class FetchHttpClient implements HttpClient {
 
   patch<S extends z.ZodType>(path: string, body: unknown, schema: S) {
     return this.request(path, { method: 'PATCH', body: JSON.stringify(body) }, schema);
+  }
+
+  postForm<S extends z.ZodType>(path: string, form: FormData, schema: S) {
+    return this.request(path, { method: 'POST', body: form }, schema);
   }
 
   async delete(path: string): Promise<void> {
@@ -76,24 +78,14 @@ export class FetchHttpClient implements HttpClient {
   private async send(path: string, init: RequestInit): Promise<Response> {
     const headers = new Headers(init.headers);
     headers.set('Accept', 'application/json');
-    if (init.body !== undefined) headers.set('Content-Type', 'application/json');
+    // FormData gets its multipart boundary from fetch itself.
+    if (typeof init.body === 'string') headers.set('Content-Type', 'application/json');
 
-    const res = await this.fetchImpl(this.baseUrl + path, {
-      ...init,
-      headers,
-      credentials: 'same-origin',
-    });
+    const res = await this.fetchImpl(this.baseUrl + path, { ...init, headers });
     if (res.ok) return res;
 
     const problem = await readProblem(res);
-    const error = new ApiError(
-      res.status,
-      problem.title ?? res.statusText,
-      problem.detail,
-      problem.errors,
-    );
-    if (error.isUnauthorized) this.onUnauthorized?.();
-    throw error;
+    throw new ApiError(res.status, problem.title ?? res.statusText, problem.detail, problem.errors);
   }
 }
 

@@ -15,7 +15,6 @@ type Config struct {
 	MigrateOnStart bool   `env:"MIGRATE_ON_START" envDefault:"true"`
 	PublicBaseURL  string `env:"PUBLIC_BASE_URL" envDefault:"http://localhost:8080"`
 	Log            Log
-	Auth           Auth
 	MusicBrainz    MusicBrainz
 	Sync           Sync
 	SMTP           SMTP
@@ -32,13 +31,6 @@ type HTTP struct {
 type Log struct {
 	Level  string `env:"LOG_LEVEL" envDefault:"info"`
 	Format string `env:"LOG_FORMAT" envDefault:"json"` // json | text
-}
-
-type Auth struct {
-	// PasswordHash is an argon2id PHC string; empty disables authentication.
-	PasswordHash  string        `env:"APP_PASSWORD_HASH"`
-	SessionSecret string        `env:"SESSION_SECRET"`
-	SessionTTL    time.Duration `env:"SESSION_TTL" envDefault:"720h"`
 }
 
 type MusicBrainz struct {
@@ -64,9 +56,6 @@ type Worker struct {
 	Concurrency int `env:"WORKER_CONCURRENCY" envDefault:"4"`
 }
 
-// AuthEnabled reports whether the app is protected by a password.
-func (c Config) AuthEnabled() bool { return c.Auth.PasswordHash != "" }
-
 // Load parses the environment and validates cross-field constraints.
 func Load() (Config, error) {
 	cfg, err := env.ParseAs[Config]()
@@ -80,9 +69,6 @@ func Load() (Config, error) {
 }
 
 func (c Config) validate() error {
-	if c.AuthEnabled() && len(c.Auth.SessionSecret) < 32 {
-		return fmt.Errorf("SESSION_SECRET must be at least 32 characters when APP_PASSWORD_HASH is set")
-	}
 	if c.MusicBrainz.RateLimit <= 0 || c.MusicBrainz.RateLimit > 1 {
 		return fmt.Errorf("MB_RATE_LIMIT must be in (0, 1], MusicBrainz allows 1 request per second")
 	}

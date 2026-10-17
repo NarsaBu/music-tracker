@@ -2,7 +2,7 @@
 
 ## Этап 0. Каркас ✅
 - [x] Монорепо: `backend/`, `frontend/`, `docker-compose.yml`, `Makefile`
-- [x] Backend: `cmd/tracker` (serve, migrate, hash-password), config, slog, chi, `/healthz`, `/readyz`, golang-migrate (встроенные миграции), sqlc
+- [x] Backend: `cmd/tracker` (serve, migrate), config, slog, chi, `/healthz`, `/readyz`, golang-migrate (встроенные миграции), sqlc
 - [x] Frontend: Vite + React + TS, роутер, `HttpClient`
 - [x] Дизайн-токены, шрифты, текстуры, ночная тема; Storybook
 - [x] UI-кит: Panel, PushButton, ToggleSwitch, RotarySelector, Led, LcdDisplay, EngravedInput
@@ -32,22 +32,17 @@
 - [x] Email-дайджест (SMTP, шаблоны), тестовое письмо, mailpit в dev
 - [x] Atom/RSS-фиды
 - [x] UI: настройки (панель усилителя), лента новинок (полка пластинок), фильтр подписки на странице исполнителя
-- Отложено: метрики уведомлений из [08 §3](08-notifications.md#3-наблюдаемость) — вместе с Prometheus на этапе 5
 
-## Этап 4. Импорт
-- [ ] Парсеры txt/csv
-- [ ] Асинхронная обработка, эвристика уверенности
-- [ ] UI: загрузка (кассетная дека), прогресс, ручное разрешение
+## Этап 4. Импорт ✅
+- [x] Парсеры txt/csv (имя, MBID или ссылка MusicBrainz; CSV с `,`/`;`, колонки `name`, `mbid`, `include_featured`)
+- [x] Асинхронная обработка (задача `import_item` на строку), эвристика уверенности `domain.AutoMatch`
+- [x] UI: загрузка (кассетная дека), прогресс, ручное разрешение (выбор кандидата, свой MBID, пропуск)
+- `GET /imports/{id}/items?status=` принимает список статусов через запятую
 
 ## Этап 5. Прод
-- [ ] Вход по паролю, cookie-сессия, CSRF, rate limit на вход
-- [ ] Метрики Prometheus, дашборд
-- [ ] Docker-образы, деплой
-- [ ] e2e-тесты Playwright
+- [ ] Docker-образы, деплой стеком в Portainer
 
 ## Дальше
-- Telegram / webhook каналы
-- Импорт из Last.fm / Spotify
 - Адаптивная частота синхронизации
 - Обработка merge исполнителей в MusicBrainz
 - Featuring на уровне треков (обход recordings)

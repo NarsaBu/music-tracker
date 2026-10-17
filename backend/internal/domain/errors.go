@@ -5,10 +5,11 @@ package domain
 import "errors"
 
 var (
-	ErrNotFound            = errors.New("not found")
-	ErrAlreadyExists       = errors.New("already exists")
+	ErrNotFound      = errors.New("not found")
+	ErrAlreadyExists = errors.New("already exists")
+	// ErrConflict: the operation does not fit the current state of the resource.
+	ErrConflict            = errors.New("conflict")
 	ErrValidation          = errors.New("validation failed")
-	ErrUnauthorized        = errors.New("unauthorized")
 	ErrUpstreamUnavailable = errors.New("upstream unavailable")
 )
 

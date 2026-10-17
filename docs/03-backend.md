@@ -36,10 +36,9 @@ backend/
 │   │   ├── sync/                # ScheduleSyncRun, SyncArtist, DetectNewReleases
 │   │   ├── notify/              # FanOutNotifications, ScheduleDigest, SendDigest, SendTestEmail
 │   │   ├── feed/                # BuildFeed, RotateFeedToken
-│   │   ├── settings/            # GetSettings, UpdateSettings
-│   │   └── auth/                # Login, Logout (проверка пароля, выпуск cookie)
+│   │   └── settings/            # GetSettings, UpdateSettings
 │   ├── adapter/
-│   │   ├── http/                # chi-роутер, handlers, DTO, middleware (session, CSRF/Origin, logging, recover)
+│   │   ├── http/                # chi-роутер, handlers, DTO, middleware (logging, recover)
 │   │   ├── feed/                # рендер Atom/RSS (gorilla/feeds)
 │   │   ├── postgres/            # репозитории (pgx + sqlc), TxManager
 │   │   ├── musicbrainz/         # HTTP-клиент, маппинг JSON → domain, rate limiter
@@ -49,7 +48,7 @@ backend/
 │       ├── config/              # env → struct (caarlos0/env)
 │       ├── scheduler/           # robfig/cron
 │       ├── jobs/                # воркеры очереди задач (SKIP LOCKED)
-│       └── observability/       # slog, prometheus
+│       └── observability/       # slog
 ├── migrations/                  # golang-migrate, NNNN_name.up.sql / .down.sql
 ├── queries/                     # SQL для sqlc
 ├── sqlc.yaml
@@ -129,15 +128,12 @@ type SyncArtist struct {
 
 ## 5. Конфигурация (env)
 
-Локально переменные задаются в `.env` в корне репозитория (шаблон — `.env.example`, сам `.env` в git не попадает). Его читают `make run-backend` / `make migrate-*` и docker compose; в compose `DATABASE_URL`, `SMTP_HOST/PORT` и `PUBLIC_BASE_URL` переопределяются адресами внутри docker-сети. Значения с `$` (хэш пароля) пишутся в одинарных кавычках.
+Локально переменные задаются в `.env` в корне репозитория (шаблон — `.env.example`, сам `.env` в git не попадает). Его читают `make run-backend` / `make migrate-*` и docker compose; в compose `DATABASE_URL`, `SMTP_HOST/PORT` и `PUBLIC_BASE_URL` переопределяются адресами внутри docker-сети.
 
 | Переменная | По умолчанию | Описание |
 |------------|--------------|----------|
 | `HTTP_ADDR` | `:8080` | Адрес HTTP-сервера |
 | `DATABASE_URL` | — | DSN PostgreSQL |
-| `APP_PASSWORD_HASH` | — | argon2id-хэш пароля входа; пусто = без аутентификации (только localhost). Генерация: `tracker hash-password` |
-| `SESSION_SECRET` | — | Ключ HMAC для cookie-сессии |
-| `SESSION_TTL` | `720h` | Время жизни сессии |
 | `PUBLIC_BASE_URL` | `http://localhost:8080` | Для ссылок в письмах и фидах |
 | `MB_BASE_URL` | `https://musicbrainz.org/ws/2` | API MusicBrainz |
 | `MB_USER_AGENT` | — | Напр. `MusicTracker/0.1 ( you@example.com )` — **обязательно** |

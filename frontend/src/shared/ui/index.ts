@@ -1,3 +1,4 @@
+export { CassetteDropzone, type CassetteDropzoneProps } from './CassetteDropzone/CassetteDropzone';
 export { EngravedInput, type EngravedInputProps } from './EngravedInput/EngravedInput';
 export { IndexCard, type IndexCardProps } from './IndexCard/IndexCard';
 export { LcdDisplay, type LcdDisplayProps } from './LcdDisplay/LcdDisplay';

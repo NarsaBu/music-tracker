@@ -64,7 +64,6 @@ func TestWriteError_Mapping(t *testing.T) {
 		{&domain.ValidationError{Fields: []domain.FieldError{{Field: "mbid", Message: "required"}}}, http.StatusUnprocessableEntity},
 		{domain.ErrNotFound, http.StatusNotFound},
 		{domain.ErrAlreadyExists, http.StatusConflict},
-		{domain.ErrUnauthorized, http.StatusUnauthorized},
 		{domain.ErrUpstreamUnavailable, http.StatusServiceUnavailable},
 		{errors.New("boom"), http.StatusInternalServerError},
 	}

@@ -1,6 +1,6 @@
 # 06 — REST API
 
-Базовый путь: `/api/v1`. Формат: JSON. Аутентификация: HttpOnly cookie `session` (кроме `/auth/*`, `/feeds/*` и служебных эндпоинтов). Если пароль в конфиге не задан — аутентификация отключена.
+Базовый путь: `/api/v1`. Формат: JSON. Аутентификации нет (см. [§2](#2-доступ)).
 
 ## 1. Общие соглашения
 
@@ -26,20 +26,11 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
 | `ErrValidation` | 422 |
 | `ErrNotFound` | 404 |
 | `ErrAlreadyExists` | 409 |
-| `ErrUnauthorized` | 401 |
 | `ErrUpstreamUnavailable` (MusicBrainz, SMTP) | 503 |
-
-**CSRF**: для изменяющих запросов backend проверяет заголовок `Origin` против `PUBLIC_BASE_URL`; cookie `SameSite=Strict`.
 
 ## 2. Доступ
 
-| Метод | Путь | Описание |
-|-------|------|----------|
-| POST | `/auth/login` | `{password}` → 204 + `Set-Cookie` |
-| POST | `/auth/logout` | 204, cookie сбрасывается |
-| GET  | `/auth/session` | `{authenticated: bool, auth_required: bool}` |
-
-Защита от перебора: не более 5 неудачных попыток в минуту с IP.
+API открыт для всех, кто достучался до сервера: приложение рассчитано на доверенную сеть ([ADR-8](02-architecture.md#adr-8-однопользовательский-режим)). Для доступа снаружи защиту ставят на reverse proxy (basic auth, VPN, SSO-шлюз).
 
 ## 3. Каталог (прокси к MusicBrainz)
 
@@ -197,7 +188,7 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
 }
 ```
 
-## 9. Фиды (без сессии, по токену)
+## 9. Фиды (по токену)
 
 | Метод | Путь | Описание |
 |-------|------|----------|
@@ -208,4 +199,4 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
 
 ## 10. Служебные
 
-`GET /healthz` (liveness), `GET /readyz` (БД доступна), `GET /metrics` (Prometheus, закрыть от внешнего доступа).
+`GET /healthz` (liveness), `GET /readyz` (БД доступна).

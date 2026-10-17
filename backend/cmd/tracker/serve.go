@@ -12,6 +12,7 @@ import (
 
 	"music-tracker/backend/internal/adapter/email"
 	httpadapter "music-tracker/backend/internal/adapter/http"
+	"music-tracker/backend/internal/adapter/importfile"
 	"music-tracker/backend/internal/adapter/musicbrainz"
 	"music-tracker/backend/internal/adapter/postgres"
 	"music-tracker/backend/internal/domain"
@@ -21,6 +22,7 @@ import (
 	"music-tracker/backend/internal/infrastructure/scheduler"
 	"music-tracker/backend/internal/usecase"
 	"music-tracker/backend/internal/usecase/artist"
+	"music-tracker/backend/internal/usecase/importer"
 	"music-tracker/backend/internal/usecase/notify"
 	settingsuc "music-tracker/backend/internal/usecase/settings"
 	syncuc "music-tracker/backend/internal/usecase/sync"
@@ -36,10 +38,6 @@ func serve(ctx context.Context) error {
 		return err
 	}
 	slog.SetDefault(log)
-
-	if !cfg.AuthEnabled() {
-		log.Warn("APP_PASSWORD_HASH is not set: authentication is disabled, expose the app only on localhost")
-	}
 
 	if cfg.MigrateOnStart {
 		if err := migrateUp(cfg.DatabaseURL); err != nil {
@@ -67,6 +65,7 @@ func serve(ctx context.Context) error {
 	runs := postgres.NewSyncRunRepository(pool)
 	queue := postgres.NewJobQueue(pool)
 	notifications := postgres.NewNotificationRepository(pool)
+	imports := postgres.NewImportRepository(pool)
 	clock := usecase.SystemClock{}
 
 	mailer, err := email.NewMailer(email.Config{
@@ -88,13 +87,15 @@ func serve(ctx context.Context) error {
 	sendDigest := notify.NewSendDigest(settings, notifications, mailer, tx, clock)
 	settingsCfg := settingsuc.Config{PublicBaseURL: cfg.PublicBaseURL}
 	scheduleRun := syncuc.NewScheduleSyncRun(artists, runs, queue, tx, clock)
+	subscribe := artist.NewSubscribe(catalog, artists, subs, settings, queue, tx, clock)
+	processImport := importer.NewProcessItem(catalog, imports, subscribe, tx, clock)
 
 	router := httpadapter.NewRouter(httpadapter.Deps{
 		Logger:    log,
 		Readiness: pool,
 		Artists: httpadapter.ArtistUseCases{
 			Search:        artist.NewSearchArtists(catalog, subs),
-			Subscribe:     artist.NewSubscribe(catalog, artists, subs, settings, queue, tx, clock),
+			Subscribe:     subscribe,
 			Unsubscribe:   artist.NewUnsubscribe(subs),
 			List:          artist.NewListSubscriptions(subs, settings),
 			Get:           artist.NewGetSubscription(subs, settings),
@@ -114,7 +115,14 @@ func serve(ctx context.Context) error {
 		},
 		Releases: notify.NewListReleases(notifications),
 		Feeds:    notify.NewBuildFeed(settings, notifications),
-		AppURL:   cfg.PublicBaseURL,
+		Imports: httpadapter.ImportUseCases{
+			Create:  importer.NewCreateImport(importfile.Parser{}, imports, queue, tx, clock),
+			List:    importer.NewListImports(imports),
+			Get:     importer.NewGetImport(imports),
+			Items:   importer.NewListItems(imports),
+			Resolve: importer.NewResolveItem(catalog, imports, subscribe, tx),
+		},
+		AppURL: cfg.PublicBaseURL,
 	})
 
 	// Background work stops with ctx; serve returns only after it has finished.
@@ -128,6 +136,7 @@ func serve(ctx context.Context) error {
 	runner := jobs.NewRunner(queue, jobs.Config{Concurrency: cfg.Worker.Concurrency}, log)
 	runner.Register(usecase.JobSyncArtist, syncArtist)
 	runner.Register(usecase.JobSendDigest, sendDigest)
+	runner.Register(usecase.JobImportItem, processImport)
 	background.Go(func() { runner.Run(ctx) })
 
 	sched := scheduler.New(log)

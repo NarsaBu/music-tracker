@@ -1,4 +1,4 @@
-// Package observability sets up logging and metrics.
+// Package observability sets up logging.
 package observability
 
 import (

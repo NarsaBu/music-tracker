@@ -38,6 +38,20 @@ func (q *JobQueue) Enqueue(ctx context.Context, job usecase.Job) (bool, error) {
 	return n == 1, nil
 }
 
+func (q *JobQueue) EnqueueMany(ctx context.Context, js []usecase.Job) error {
+	params := make([]sqlc.EnqueueJobsParams, len(js))
+	for i, job := range js {
+		payload, err := json.Marshal(job.Payload)
+		if err != nil {
+			return fmt.Errorf("enqueue %s: marshal payload: %w", job.Kind, err)
+		}
+		params[i] = sqlc.EnqueueJobsParams{
+			Kind: job.Kind, Payload: payload, DedupKey: optionalText(job.DedupKey), RunAt: job.RunAt,
+		}
+	}
+	return execBatch("enqueue jobs", queries(ctx, q.pool).EnqueueJobs(ctx, params))
+}
+
 func (q *JobQueue) Claim(ctx context.Context) (jobs.Job, bool, error) {
 	row, err := queries(ctx, q.pool).ClaimJob(ctx)
 	if errors.Is(err, pgx.ErrNoRows) {

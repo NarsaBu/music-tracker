@@ -18,6 +18,7 @@ type Deps struct {
 	Settings  SettingsUseCases
 	Releases  ReleasesLister
 	Feeds     FeedBuilder
+	Imports   ImportUseCases
 	// AppURL is the public address of the app, linked from feeds.
 	AppURL string
 }
@@ -36,6 +37,7 @@ func NewRouter(d Deps) http.Handler {
 	artists := &artistHandler{uc: d.Artists, log: d.Logger}
 	sync := &syncHandler{uc: d.Sync, log: d.Logger}
 	settings := &settingsHandler{uc: d.Settings, log: d.Logger}
+	imports := &importHandler{uc: d.Imports, log: d.Logger}
 	releases := &releasesHandler{list: d.Releases, feeds: d.Feeds, appURL: d.AppURL, log: d.Logger}
 
 	r.Get("/feeds/{file}", releases.serveFeed)
@@ -54,6 +56,13 @@ func NewRouter(d Deps) http.Handler {
 		r.Post("/sync", sync.start)
 		r.Get("/sync/runs/latest", sync.latest)
 		r.Get("/releases", releases.listReleases)
+		r.Route("/imports", func(r chi.Router) {
+			r.Get("/", imports.list)
+			r.Post("/", imports.create)
+			r.Get("/{id}", imports.get)
+			r.Get("/{id}/items", imports.items)
+			r.Post("/{id}/items/{itemId}/resolve", imports.resolve)
+		})
 		r.Get("/settings", settings.get)
 		r.Put("/settings", settings.put)
 		r.Post("/settings/email/test", settings.testEmail)

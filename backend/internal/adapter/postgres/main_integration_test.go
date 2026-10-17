@@ -61,7 +61,7 @@ func runWithDatabase(m *testing.M) int {
 // resetTables empties the tables a test touches.
 func resetTables(t *testing.T) {
 	t.Helper()
-	if _, err := testPool.Exec(context.Background(), "TRUNCATE subscriptions, artists, release_groups, artist_release_groups, sync_runs, jobs, notifications"); err != nil {
+	if _, err := testPool.Exec(context.Background(), "TRUNCATE subscriptions, artists, release_groups, artist_release_groups, sync_runs, jobs, notifications, import_jobs, import_items"); err != nil {
 		t.Fatal(err)
 	}
 }

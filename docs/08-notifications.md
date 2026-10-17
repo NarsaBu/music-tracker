@@ -37,7 +37,7 @@ type Notifier interface {
 }
 ```
 
-Добавление Telegram/Webhook = новый адаптер + значение enum + регистрация в composition root. Use cases не меняются (OCP).
+Добавление канала = новый адаптер + значение enum + регистрация в composition root. Use cases не меняются (OCP).
 
 ### 2.1 Email-дайджест
 
@@ -84,10 +84,4 @@ FOR UPDATE SKIP LOCKED;
 
 ## 3. Наблюдаемость
 
-Метрики Prometheus:
-- `notifications_created_total{channel,role}`
-- `notifications_sent_total{channel}` / `notifications_failed_total{channel}`
-- `notifications_pending{channel}` (gauge)
-- `digest_sent_total`, `digest_items` (histogram)
-- `musicbrainz_requests_total{endpoint,status}`, `musicbrainz_request_duration_seconds`
-- `sync_run_duration_seconds`, `sync_new_release_groups_total`
+Отдельных метрик нет: приложение работает под Portainer, состояние смотрится по структурированным логам контейнера (`slog`, JSON) и по `/healthz`, `/readyz`. Ошибки доставки видны в логах и в статусах `notifications`.

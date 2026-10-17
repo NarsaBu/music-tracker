@@ -18,10 +18,6 @@ export class ApiError extends Error {
     this.detail = detail;
     this.fields = fields;
   }
-
-  get isUnauthorized(): boolean {
-    return this.status === 401;
-  }
 }
 
 /** The response was received but did not match the expected schema. */

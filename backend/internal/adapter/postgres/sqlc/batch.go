@@ -19,6 +19,124 @@ var (
 	ErrBatchAlreadyClosed = errors.New("batch already closed")
 )
 
+const enqueueJobs = `-- name: EnqueueJobs :batchexec
+INSERT INTO jobs (kind, payload, dedup_key, run_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (dedup_key) DO UPDATE
+SET kind = EXCLUDED.kind, payload = EXCLUDED.payload, run_at = EXCLUDED.run_at,
+    attempts = 0, locked_at = NULL, last_error = NULL
+WHERE jobs.attempts >= jobs.max_attempts
+`
+
+type EnqueueJobsBatchResults struct {
+	br     pgx.BatchResults
+	tot    int
+	closed bool
+}
+
+type EnqueueJobsParams struct {
+	Kind     string
+	Payload  []byte
+	DedupKey pgtype.Text
+	RunAt    time.Time
+}
+
+// Same as EnqueueJob, for many jobs in one round trip.
+func (q *Queries) EnqueueJobs(ctx context.Context, arg []EnqueueJobsParams) *EnqueueJobsBatchResults {
+	batch := &pgx.Batch{}
+	for _, a := range arg {
+		vals := []interface{}{
+			a.Kind,
+			a.Payload,
+			a.DedupKey,
+			a.RunAt,
+		}
+		batch.Queue(enqueueJobs, vals...)
+	}
+	br := q.db.SendBatch(ctx, batch)
+	return &EnqueueJobsBatchResults{br, len(arg), false}
+}
+
+func (b *EnqueueJobsBatchResults) Exec(f func(int, error)) {
+	defer b.br.Close()
+	for t := 0; t < b.tot; t++ {
+		if b.closed {
+			if f != nil {
+				f(t, ErrBatchAlreadyClosed)
+			}
+			continue
+		}
+		_, err := b.br.Exec()
+		if f != nil {
+			f(t, err)
+		}
+	}
+}
+
+func (b *EnqueueJobsBatchResults) Close() error {
+	b.closed = true
+	return b.br.Close()
+}
+
+const insertImportItem = `-- name: InsertImportItem :batchone
+INSERT INTO import_items (job_id, line_no, raw_value, input_mbid, include_featured)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id
+`
+
+type InsertImportItemBatchResults struct {
+	br     pgx.BatchResults
+	tot    int
+	closed bool
+}
+
+type InsertImportItemParams struct {
+	JobID           uuid.UUID
+	LineNo          int32
+	RawValue        string
+	InputMbid       uuid.NullUUID
+	IncludeFeatured pgtype.Bool
+}
+
+func (q *Queries) InsertImportItem(ctx context.Context, arg []InsertImportItemParams) *InsertImportItemBatchResults {
+	batch := &pgx.Batch{}
+	for _, a := range arg {
+		vals := []interface{}{
+			a.JobID,
+			a.LineNo,
+			a.RawValue,
+			a.InputMbid,
+			a.IncludeFeatured,
+		}
+		batch.Queue(insertImportItem, vals...)
+	}
+	br := q.db.SendBatch(ctx, batch)
+	return &InsertImportItemBatchResults{br, len(arg), false}
+}
+
+func (b *InsertImportItemBatchResults) QueryRow(f func(int, uuid.UUID, error)) {
+	defer b.br.Close()
+	for t := 0; t < b.tot; t++ {
+		var id uuid.UUID
+		if b.closed {
+			if f != nil {
+				f(t, id, ErrBatchAlreadyClosed)
+			}
+			continue
+		}
+		row := b.br.QueryRow()
+		err := row.Scan(&id)
+		if f != nil {
+			f(t, id, err)
+		}
+	}
+}
+
+func (b *InsertImportItemBatchResults) Close() error {
+	b.closed = true
+	return b.br.Close()
+}
+
 const linkArtistReleaseGroup = `-- name: LinkArtistReleaseGroup :batchexec
 INSERT INTO artist_release_groups (artist_mbid, release_group_mbid, credit_role, is_baseline, discovered_at)
 VALUES ($1, $2, $3, $4, $5)

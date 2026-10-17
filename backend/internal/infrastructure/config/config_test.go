@@ -21,9 +21,6 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.HTTP.Addr != ":8080" {
 		t.Errorf("HTTP.Addr = %q, want :8080", cfg.HTTP.Addr)
 	}
-	if cfg.AuthEnabled() {
-		t.Error("AuthEnabled() = true, want false without APP_PASSWORD_HASH")
-	}
 	if cfg.Sync.StaleDays != 90 {
 		t.Errorf("Sync.StaleDays = %d, want 90", cfg.Sync.StaleDays)
 	}
@@ -39,11 +36,6 @@ func TestLoad_Validation(t *testing.T) {
 			name:    "missing required",
 			env:     map[string]string{"DATABASE_URL": "", "MB_USER_AGENT": ""},
 			wantErr: "DATABASE_URL",
-		},
-		{
-			name:    "short session secret with auth",
-			env:     map[string]string{"APP_PASSWORD_HASH": "$argon2id$x", "SESSION_SECRET": "short"},
-			wantErr: "SESSION_SECRET",
 		},
 		{
 			name:    "rate limit above MusicBrainz policy",

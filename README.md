@@ -28,7 +28,7 @@ make run-frontend   # UI на http://localhost:5173
 
 Весь стек в Docker: `make up` → UI на http://localhost:3000, письма — http://localhost:8025.
 
-Прочее: `make help` (тесты, линтеры, миграции, sqlc, Storybook, `hash-password`).
+Прочее: `make help` (тесты, линтеры, миграции, sqlc, Storybook).
 
 ## Структура
 

@@ -51,12 +51,6 @@ pnpm-debug.log*
 # Storybook
 frontend/storybook-static/
 
-# Playwright
-frontend/test-results/
-frontend/playwright-report/
-frontend/blob-report/
-frontend/playwright/.cache/
-
 # ---------- Docker / local data ----------
 .data/
 pgdata/

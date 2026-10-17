@@ -32,3 +32,12 @@ UPDATE jobs SET last_error = $2 WHERE id = $1;
 -- name: ReleaseStaleJobs :execrows
 UPDATE jobs SET locked_at = NULL
 WHERE locked_at < $1 AND attempts < max_attempts;
+
+-- Same as EnqueueJob, for many jobs in one round trip.
+-- name: EnqueueJobs :batchexec
+INSERT INTO jobs (kind, payload, dedup_key, run_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (dedup_key) DO UPDATE
+SET kind = EXCLUDED.kind, payload = EXCLUDED.payload, run_at = EXCLUDED.run_at,
+    attempts = 0, locked_at = NULL, last_error = NULL
+WHERE jobs.attempts >= jobs.max_attempts;

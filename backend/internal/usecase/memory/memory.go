@@ -26,6 +26,8 @@ type Store struct {
 	Jobs     []usecase.Job
 	Settings domain.Settings
 	Notifs   []StoredNotification
+	Imports  []domain.ImportJob
+	Items    []domain.ImportItem
 }
 
 // StoredNotification is a notification row as the outbox keeps it.
@@ -62,6 +64,7 @@ func (s *Store) RunRepo() *RunRepo                   { return &RunRepo{s} }
 func (s *Store) Queue() *Queue                       { return &Queue{s} }
 func (s *Store) SettingsRepo() *SettingsRepo         { return &SettingsRepo{s} }
 func (s *Store) NotificationRepo() *NotificationRepo { return &NotificationRepo{s} }
+func (s *Store) ImportRepo() *ImportRepo             { return &ImportRepo{s} }
 
 // FilterDefaults implements usecase.FilterDefaultsReader.
 func (s *Store) FilterDefaults(context.Context) (domain.ReleaseFilter, error) {
@@ -309,6 +312,15 @@ func (q *Queue) Enqueue(_ context.Context, job usecase.Job) (bool, error) {
 	return true, nil
 }
 
+func (q *Queue) EnqueueMany(ctx context.Context, jobs []usecase.Job) error {
+	for _, job := range jobs {
+		if _, err := q.Enqueue(ctx, job); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // TxManager runs fn directly: the in-memory store has no rollback.
 type TxManager struct{}
 
@@ -454,4 +466,109 @@ func (r *NotificationRepo) ListFeed(_ context.Context, q usecase.FeedQuery) ([]d
 		out = append(out, r.item(n))
 	}
 	return out, nil
+}
+
+// --- imports ---
+
+type ImportRepo struct{ s *Store }
+
+func (r *ImportRepo) Create(_ context.Context, filename string, lines []domain.ImportLine, at time.Time) (domain.ImportJob, []domain.ImportItem, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	job := domain.ImportJob{ID: fmt.Sprintf("import-%d", len(r.s.Imports)+1), Filename: filename, Total: len(lines), CreatedAt: at}
+	r.s.Imports = append(r.s.Imports, job)
+	var items []domain.ImportItem
+	for _, l := range lines {
+		it := domain.ImportItem{
+			ID: fmt.Sprintf("item-%d", len(r.s.Items)+1), JobID: job.ID, LineNo: l.LineNo, RawValue: l.Value,
+			InputMBID: l.MBID, IncludeFeatured: l.IncludeFeatured, Status: domain.ImportPending,
+		}
+		r.s.Items = append(r.s.Items, it)
+		items = append(items, it)
+	}
+	return r.withCounts(job), items, nil
+}
+
+func (r *ImportRepo) withCounts(job domain.ImportJob) domain.ImportJob {
+	job.Counts = map[domain.ImportItemStatus]int{}
+	for _, it := range r.s.Items {
+		if it.JobID == job.ID {
+			job.Counts[it.Status]++
+		}
+	}
+	return job
+}
+
+func (r *ImportRepo) Get(_ context.Context, id string) (domain.ImportJob, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for _, job := range r.s.Imports {
+		if job.ID == id {
+			return r.withCounts(job), nil
+		}
+	}
+	return domain.ImportJob{}, domain.ErrNotFound
+}
+
+func (r *ImportRepo) List(_ context.Context, limit int) ([]domain.ImportJob, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []domain.ImportJob
+	for i := len(r.s.Imports) - 1; i >= 0 && len(out) < limit; i-- {
+		out = append(out, r.withCounts(r.s.Imports[i]))
+	}
+	return out, nil
+}
+
+func (r *ImportRepo) GetItem(_ context.Context, jobID, itemID string) (domain.ImportItem, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for _, it := range r.s.Items {
+		if it.ID == itemID && (jobID == "" || it.JobID == jobID) {
+			return it, nil
+		}
+	}
+	return domain.ImportItem{}, domain.ErrNotFound
+}
+
+func (r *ImportRepo) ListItems(_ context.Context, jobID string, statuses []domain.ImportItemStatus) ([]domain.ImportItem, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []domain.ImportItem
+	for _, it := range r.s.Items {
+		if it.JobID == jobID && (len(statuses) == 0 || slices.Contains(statuses, it.Status)) {
+			out = append(out, it)
+		}
+	}
+	return out, nil
+}
+
+func (r *ImportRepo) UpdateItem(_ context.Context, item domain.ImportItem) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for i, it := range r.s.Items {
+		if it.ID == item.ID {
+			if item.Artist != nil {
+				// Like the database: the item references the artist, the name comes from the artists table.
+				item.Artist = &domain.Artist{MBID: item.Artist.MBID, Name: r.s.Artists[item.Artist.MBID].Name}
+			}
+			r.s.Items[i] = item
+			return nil
+		}
+	}
+	return domain.ErrNotFound
+}
+
+func (r *ImportRepo) FinishIfDone(_ context.Context, jobID string, at time.Time) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for i, job := range r.s.Imports {
+		if job.ID != jobID || job.Finished() {
+			continue
+		}
+		if r.withCounts(job).Counts[domain.ImportPending] == 0 {
+			r.s.Imports[i].FinishedAt = &at
+		}
+	}
+	return nil
 }

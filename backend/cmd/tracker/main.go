@@ -17,7 +17,6 @@ Commands:
   migrate up       apply all pending migrations
   migrate down     roll back the last migration
   migrate version  print the current schema version
-  hash-password    read a password from stdin and print APP_PASSWORD_HASH
 `
 
 func main() {
@@ -40,8 +39,6 @@ func run(ctx context.Context, args []string) error {
 		return serve(ctx)
 	case "migrate":
 		return migrateCmd(args)
-	case "hash-password":
-		return hashPassword(os.Stdin, os.Stdout)
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 		return nil

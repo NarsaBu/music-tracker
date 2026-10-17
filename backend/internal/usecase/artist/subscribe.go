@@ -73,15 +73,31 @@ func (uc *Subscribe) Execute(ctx context.Context, in SubscribeInput) (SubscribeR
 	if err != nil {
 		return SubscribeResult{}, fmt.Errorf("get artist %s: %w", mbid, err)
 	}
+	sub, created, err := uc.subscribe(ctx, artist, in.Override)
+	if err != nil {
+		return SubscribeResult{}, err
+	}
+	return uc.result(ctx, sub, created)
+}
 
+// SubscribeArtist subscribes to an artist card the caller already has (an import
+// candidate), sparing a catalog request. An existing subscription is kept as is.
+func (uc *Subscribe) SubscribeArtist(ctx context.Context, artist domain.Artist, o domain.FilterOverride) (bool, error) {
+	if err := o.Validate(); err != nil {
+		return false, err
+	}
+	_, created, err := uc.subscribe(ctx, artist, o)
+	return created, err
+}
+
+func (uc *Subscribe) subscribe(ctx context.Context, artist domain.Artist, o domain.FilterOverride) (sub domain.Subscription, created bool, err error) {
 	now := uc.clock.Now()
-	var created bool
 	err = uc.tx.WithinTx(ctx, func(ctx context.Context) error {
 		if err := uc.artists.Upsert(ctx, artist); err != nil {
 			return fmt.Errorf("upsert artist: %w", err)
 		}
 		created, err = uc.subs.Create(ctx, domain.Subscription{
-			Artist: artist, Override: in.Override, BaselineAt: now, CreatedAt: now,
+			Artist: artist, Override: o, BaselineAt: now, CreatedAt: now,
 		})
 		if err != nil {
 			return fmt.Errorf("create subscription: %w", err)
@@ -100,9 +116,9 @@ func (uc *Subscribe) Execute(ctx context.Context, in SubscribeInput) (SubscribeR
 		return nil
 	})
 	if err != nil {
-		return SubscribeResult{}, fmt.Errorf("subscribe %s: %w", mbid, err)
+		return domain.Subscription{}, false, fmt.Errorf("subscribe %s: %w", artist.MBID, err)
 	}
-	return uc.result(ctx, sub, created)
+	return sub, created, nil
 }
 
 func (uc *Subscribe) result(ctx context.Context, sub domain.Subscription, created bool) (SubscribeResult, error) {

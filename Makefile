@@ -1,8 +1,8 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-# Loads .env into the recipe's shell. Not `include .env`: make would expand the
-# `$` in values such as APP_PASSWORD_HASH.
+# Loads .env into the recipe's shell. Not `include .env`: make would keep the
+# quotes in values such as SYNC_CRON.
 WITH_ENV := set -a; [ -f .env ] && . ./.env; set +a;
 
 BACKEND  := backend
@@ -63,10 +63,6 @@ migrate-new: ## Create a migration pair: make migrate-new name=add_artists
 .PHONY: sqlc
 sqlc: ## Generate Go code from SQL queries
 	cd $(BACKEND) && go tool sqlc generate
-
-.PHONY: hash-password
-hash-password: ## Print APP_PASSWORD_HASH for a password typed interactively
-	@cd $(BACKEND) && go run ./cmd/tracker hash-password
 
 # ---------- quality ----------
 .PHONY: test

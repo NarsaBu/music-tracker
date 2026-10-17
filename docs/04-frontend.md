@@ -8,7 +8,7 @@
 - Zod — валидация ответов API на границе
 - CSS Modules + CSS custom properties (дизайн-токены) — см. [10-design.md](10-design.md)
 - Storybook — UI-кит
-- Vitest + React Testing Library, MSW для моков API; Playwright — e2e и скриншот-тесты
+- Vitest + React Testing Library, MSW для моков API
 
 ## 2. MVC в React
 
@@ -50,14 +50,14 @@ export function useSubscriptionsController() {
 - *SRP*: компонент View отвечает только за отображение; контроллер — за одну страницу/виджет.
 - *OCP*: переиспользуемые компоненты расширяются через props/composition (`renderItem`, `slots`), а не флагами-переключателями.
 - *DIP*: модели зависят от интерфейса `HttpClient`, а не от `fetch` напрямую — подменяется в тестах.
-- *DRY*: общий `HttpClient` (базовый URL, cookie-сессия, редирект на вход при 401, маппинг ошибок), UI-кит в `shared/ui`, дизайн-токены, общие query keys, общий компонент `FilterOverrideEditor` (используется и в глобальных настройках, и в настройках подписки).
+- *DRY*: общий `HttpClient` (базовый URL, маппинг ошибок), UI-кит в `shared/ui`, дизайн-токены, общие query keys, общий компонент `FilterOverrideEditor` (используется и в глобальных настройках, и в настройках подписки).
 
 ## 3. Структура
 
 ```
 frontend/
 ├── src/
-│   ├── app/                        # bootstrap: роутер, провайдеры (QueryClient, Session), layout «стойки»
+│   ├── app/                        # bootstrap: роутер, провайдеры (QueryClient), layout «стойки»
 │   ├── shared/
 │   │   ├── api/                    # HttpClient, ApiError
 │   │   ├── ui/                     # UI-кит (View): Panel, ToggleSwitch, RecordSleeve, …
@@ -68,10 +68,8 @@ frontend/
 │   │   ├── artist/      { model.ts, schema.ts, api.ts, queries.ts }
 │   │   ├── release/
 │   │   ├── subscription/
-│   │   ├── settings/
-│   │   └── session/
+│   │   └── settings/
 │   └── features/                   # фичи = Controller + View
-│       ├── login/
 │       ├── artist-search/          # поиск и подписка (US-1)
 │       ├── subscriptions/          # список подписок, override фильтров и featuring (US-4, US-5, US-6)
 │       ├── import/                 # загрузка файла, прогресс, ручное разрешение (US-2, US-3)
@@ -81,8 +79,7 @@ frontend/
 │           ├── SettingsPage.tsx
 │           ├── controller/useSettingsController.ts
 │           └── view/SettingsView.tsx
-├── .storybook/
-└── tests/e2e/
+└── .storybook/
 ```
 
 ## 4. Экраны
@@ -91,7 +88,6 @@ frontend/
 
 | Маршрут | Экран | Основные элементы |
 |---------|-------|-------------------|
-| `/login` | Вход | одно поле пароля (показывается, только если `auth_required`) |
 | `/` | Лента новинок | конверты пластинок: обложка, исполнитель, название, тип, дата, бейдж `feat.`; фильтр по типу и роли |
 | `/artists` | Подписки | карточки исполнителей, поиск, отписка, «Проверить сейчас», override типов и тумблер featuring |
 | `/artists/add` | Поиск исполнителя | поле ввода с debounce 400 мс, кандидаты (имя, disambiguation, страна, годы, score), тумблер featuring, кнопка «Подписаться» |

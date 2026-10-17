@@ -407,6 +407,27 @@ type ArtistReleaseGroup struct {
 	DiscoveredAt     time.Time
 }
 
+type ImportItem struct {
+	ID              uuid.UUID
+	JobID           uuid.UUID
+	LineNo          int32
+	RawValue        string
+	InputMbid       uuid.NullUUID
+	IncludeFeatured pgtype.Bool
+	Status          ImportItemStatus
+	Candidates      []byte
+	ArtistMbid      uuid.NullUUID
+	Error           pgtype.Text
+}
+
+type ImportJob struct {
+	ID         uuid.UUID
+	Filename   string
+	Total      int32
+	CreatedAt  time.Time
+	FinishedAt *time.Time
+}
+
 type Job struct {
 	ID          int64
 	Kind        string

@@ -52,6 +52,22 @@ func NewSendDigestJob(due, at time.Time) Job {
 	}
 }
 
+// JobImportItem matches one line of an import file to an artist.
+const JobImportItem = "import_item"
+
+type ImportItemPayload struct {
+	ItemID string `json:"item_id"`
+}
+
+func NewImportItemJob(itemID string, at time.Time) Job {
+	return Job{
+		Kind:     JobImportItem,
+		DedupKey: JobImportItem + ":" + itemID,
+		Payload:  ImportItemPayload{ItemID: itemID},
+		RunAt:    at,
+	}
+}
+
 // PermanentError marks a job failure that retrying cannot fix; the job is buried at once.
 type PermanentError struct{ Err error }
 

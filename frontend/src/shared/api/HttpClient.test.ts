@@ -31,6 +31,19 @@ describe('FetchHttpClient', () => {
     expect(new Headers(init.headers).get('Content-Type')).toBe('application/json');
   });
 
+  it('leaves the multipart content type of a form upload to fetch', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(202, { status: 'ok' }));
+    const client = new FetchHttpClient({ fetchImpl });
+    const form = new FormData();
+    form.append('file', new Blob(['Radiohead']), 'a.txt');
+
+    await client.postForm('/x', form, schema);
+
+    const init = fetchImpl.mock.calls[0]![1] as RequestInit;
+    expect(init.body).toBe(form);
+    expect(new Headers(init.headers).has('Content-Type')).toBe(false);
+  });
+
   it('treats an empty body as undefined, whatever the status', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
     const client = new FetchHttpClient({ fetchImpl });
@@ -56,15 +69,6 @@ describe('FetchHttpClient', () => {
     expect(err).toBeInstanceOf(ApiError);
     expect(err).toMatchObject({ status: 422, title: 'Validation failed', detail: 'bad mbid' });
     expect((err as ApiError).fields).toEqual([{ field: 'mbid', message: 'invalid' }]);
-  });
-
-  it('calls onUnauthorized on 401', async () => {
-    const onUnauthorized = vi.fn();
-    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(401, { title: 'Unauthorized' }));
-    const client = new FetchHttpClient({ fetchImpl, onUnauthorized });
-
-    await expect(client.get('/x', schema)).rejects.toBeInstanceOf(ApiError);
-    expect(onUnauthorized).toHaveBeenCalledOnce();
   });
 
   it('rejects responses that violate the schema', async () => {

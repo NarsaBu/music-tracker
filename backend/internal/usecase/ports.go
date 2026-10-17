@@ -5,6 +5,7 @@ package usecase
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"music-tracker/backend/internal/domain"
@@ -55,6 +56,8 @@ type SyncRunRepository interface {
 type JobQueue interface {
 	// Enqueue reports false when a live job with the same dedup key already exists.
 	Enqueue(ctx context.Context, job Job) (bool, error)
+	// EnqueueMany adds jobs in one round trip; duplicates are skipped as in Enqueue.
+	EnqueueMany(ctx context.Context, jobs []Job) error
 }
 
 // SubscriptionListQuery selects a page of subscriptions; Search matches artist names.
@@ -122,6 +125,30 @@ type NotificationRepository interface {
 type DigestMailer interface {
 	SendDigest(ctx context.Context, to string, d domain.Digest) error
 	SendTest(ctx context.Context, to string) error
+}
+
+// ImportFileParser reads an uploaded artist list (adapter/importfile).
+type ImportFileParser interface {
+	// Parse returns a *domain.ValidationError of the "file" field for a malformed file.
+	Parse(filename string, r io.Reader) ([]domain.ImportLine, error)
+}
+
+type ImportRepository interface {
+	// Create stores the job and its lines as pending items; the items are returned with IDs.
+	Create(ctx context.Context, filename string, lines []domain.ImportLine, at time.Time) (domain.ImportJob, []domain.ImportItem, error)
+	// Get returns the job with its counts, or domain.ErrNotFound.
+	Get(ctx context.Context, id string) (domain.ImportJob, error)
+	// List returns the latest jobs with their counts, newest first.
+	List(ctx context.Context, limit int) ([]domain.ImportJob, error)
+	// GetItem locks the item for the current transaction; domain.ErrNotFound when
+	// it does not exist or belongs to another job (jobID "" = any job).
+	GetItem(ctx context.Context, jobID, itemID string) (domain.ImportItem, error)
+	// ListItems returns the job's items in file order; no statuses = any status.
+	ListItems(ctx context.Context, jobID string, statuses []domain.ImportItemStatus) ([]domain.ImportItem, error)
+	// UpdateItem stores the outcome: status, candidates, artist and error.
+	UpdateItem(ctx context.Context, item domain.ImportItem) error
+	// FinishIfDone marks the job finished once none of its items is pending.
+	FinishIfDone(ctx context.Context, jobID string, at time.Time) error
 }
 
 // TxManager runs fn inside a single database transaction. Repositories pick the

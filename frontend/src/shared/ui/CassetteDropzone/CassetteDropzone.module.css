@@ -1,0 +1,136 @@
+.root {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* recessed cassette bay of the deck */
+.slot {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: center;
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  cursor: pointer;
+  background: var(--surface-well);
+  border: 1px solid var(--surface-panel-edge);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--bevel-recessed);
+  transition: box-shadow var(--dur-fast);
+}
+
+.slot:has(input:focus-visible) {
+  box-shadow: var(--bevel-recessed), var(--focus-ring);
+}
+
+.dragging {
+  box-shadow:
+    var(--bevel-recessed),
+    0 0 0 2px var(--led-on),
+    0 0 18px 4px rgb(255 90 42 / 45%);
+}
+
+.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.caption {
+  justify-self: start;
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: var(--label-tracking);
+  color: var(--text-engraved);
+  text-transform: uppercase;
+  text-shadow: var(--text-shadow-engraved);
+}
+
+/* the cassette shell: black plastic with screws in the corners */
+.cassette {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--space-2);
+  width: min(100%, 320px);
+  aspect-ratio: 10 / 6.3;
+  padding: var(--space-3) var(--space-4) var(--space-6);
+  background:
+    radial-gradient(circle at 10px 10px, var(--surface-plastic-hi) 0 3px, transparent 4px),
+    radial-gradient(
+      circle at calc(100% - 10px) 10px,
+      var(--surface-plastic-hi) 0 3px,
+      transparent 4px
+    ),
+    linear-gradient(180deg, var(--surface-plastic-hi), var(--surface-plastic) 30%);
+  border-radius: 8px 8px 4px 4px;
+  box-shadow: var(--shadow-object);
+  transition: transform var(--dur-med) var(--ease-mech);
+}
+
+/* trapezoid at the bottom where the tape is exposed */
+.cassette::after {
+  position: absolute;
+  bottom: 0;
+  left: 18%;
+  width: 64%;
+  height: var(--space-4);
+  content: '';
+  background: var(--surface-plastic-hi);
+  clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%);
+}
+
+.dragging .cassette {
+  transform: translateY(-4px);
+}
+
+/* paper label */
+.tape {
+  overflow: hidden;
+  padding: 0 var(--space-3);
+  font-family: var(--font-hand);
+  font-size: var(--text-lg);
+  line-height: 1.5;
+  color: var(--text-on-paper);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background:
+    var(--texture-noise),
+    linear-gradient(transparent 0 70%, var(--led-on) 70% 76%, transparent 76%), var(--surface-paper);
+  border-radius: 2px;
+}
+
+/* window with the two reels */
+.window {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin: 0 12%;
+  background: var(--texture-glass), var(--surface-display);
+  border: 2px solid var(--surface-plastic-hi);
+  border-radius: 999px;
+}
+
+.reel {
+  width: 30%;
+  aspect-ratio: 1;
+  background:
+    radial-gradient(circle, var(--surface-plastic) 0 22%, transparent 23%),
+    repeating-conic-gradient(var(--surface-paper) 0 12deg, transparent 12deg 60deg),
+    radial-gradient(circle, transparent 0 40%, var(--surface-panel-lo) 41% 100%);
+  border-radius: 50%;
+}
+
+.busy .reel {
+  animation: spin 1.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hint {
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-engraved-muted);
+}
