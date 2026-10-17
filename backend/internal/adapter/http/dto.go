@@ -132,3 +132,61 @@ func nullIfEmpty(s string) *string {
 	}
 	return &s
 }
+
+type releaseGroupDTO struct {
+	MBID             string              `json:"mbid"`
+	Title            string              `json:"title"`
+	ArtistCredit     string              `json:"artist_credit"`
+	CreditRole       domain.CreditRole   `json:"credit_role"`
+	PrimaryType      *domain.PrimaryType `json:"primary_type"`
+	SecondaryTypes   []string            `json:"secondary_types"`
+	FirstReleaseDate *string             `json:"first_release_date"`
+	IsBaseline       bool                `json:"is_baseline"`
+	IsAnnouncement   bool                `json:"is_announcement"`
+	CoverURL         string              `json:"cover_url"`
+	MusicBrainzURL   string              `json:"musicbrainz_url"`
+	DiscoveredAt     time.Time           `json:"discovered_at"`
+}
+
+// toReleaseGroupDTO needs now to tell announcements (future dates) apart.
+func toReleaseGroupDTO(now time.Time) func(domain.ArtistReleaseGroup) releaseGroupDTO {
+	return func(l domain.ArtistReleaseGroup) releaseGroupDTO {
+		rg := l.ReleaseGroup
+		var pt *domain.PrimaryType
+		if rg.PrimaryType != "" {
+			pt = &rg.PrimaryType
+		}
+		return releaseGroupDTO{
+			MBID:             string(rg.MBID),
+			Title:            rg.Title,
+			ArtistCredit:     rg.ArtistCredit,
+			CreditRole:       l.Role,
+			PrimaryType:      pt,
+			SecondaryTypes:   rg.SecondaryTypes,
+			FirstReleaseDate: nullIfEmpty(rg.FirstRelease.Raw),
+			IsBaseline:       l.IsBaseline,
+			IsAnnouncement:   rg.FirstRelease.IsAnnouncement(now),
+			// Cover Art Archive redirects to the image; the backend never downloads it.
+			CoverURL:       "https://coverartarchive.org/release-group/" + string(rg.MBID) + "/front-250",
+			MusicBrainzURL: "https://musicbrainz.org/release-group/" + string(rg.MBID),
+			DiscoveredAt:   l.DiscoveredAt,
+		}
+	}
+}
+
+type syncRunDTO struct {
+	ID           string     `json:"id"`
+	Trigger      string     `json:"trigger"`
+	StartedAt    time.Time  `json:"started_at"`
+	FinishedAt   *time.Time `json:"finished_at"`
+	ArtistsTotal int        `json:"artists_total"`
+	ArtistsDone  int        `json:"artists_done"`
+	NewReleases  int        `json:"new_releases"`
+}
+
+func toSyncRunDTO(r domain.SyncRun) syncRunDTO {
+	return syncRunDTO{
+		ID: r.ID, Trigger: string(r.Trigger), StartedAt: r.StartedAt, FinishedAt: r.FinishedAt,
+		ArtistsTotal: r.ArtistsTotal, ArtistsDone: r.ArtistsDone, NewReleases: r.NewReleases,
+	}
+}

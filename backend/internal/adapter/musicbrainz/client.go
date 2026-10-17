@@ -30,6 +30,8 @@ type Config struct {
 	BaseBackoff time.Duration // default 2s, doubled per attempt
 	// MaxRetryAfter caps a server-requested pause, default 30s.
 	MaxRetryAfter time.Duration
+	// PageSize of browse requests, default (and MusicBrainz maximum) 100.
+	PageSize int
 }
 
 // Client is safe for concurrent use. Create one per process: the limiter must be shared (ADR-6).
@@ -41,6 +43,7 @@ type Client struct {
 	maxAttempts   int
 	baseBackoff   time.Duration
 	maxRetryAfter time.Duration
+	pageSize      int
 }
 
 func NewClient(cfg Config) *Client {
@@ -52,6 +55,7 @@ func NewClient(cfg Config) *Client {
 		maxAttempts:   cfg.MaxAttempts,
 		baseBackoff:   cfg.BaseBackoff,
 		maxRetryAfter: cfg.MaxRetryAfter,
+		pageSize:      cfg.PageSize,
 	}
 	if c.http.Timeout == 0 {
 		c.http.Timeout = 15 * time.Second
@@ -64,6 +68,9 @@ func NewClient(cfg Config) *Client {
 	}
 	if c.maxRetryAfter == 0 {
 		c.maxRetryAfter = 30 * time.Second
+	}
+	if c.pageSize == 0 {
+		c.pageSize = 100
 	}
 	return c
 }

@@ -10,7 +10,28 @@ const subscriptionApi = createSubscriptionApi(httpClient);
 export const subscriptionKeys = {
   all: ['subscriptions'] as const,
   list: (params: SubscriptionListParams) => [...subscriptionKeys.all, 'list', params] as const,
+  one: (mbid: string) => [...subscriptionKeys.all, 'one', mbid] as const,
 };
+
+export interface SubscriptionQueryOptions {
+  /** Poll interval in ms, e.g. while waiting for a requested check; false = no polling. */
+  pollMs?: number | false;
+}
+
+export function useSubscriptionQuery(
+  mbid: string,
+  { pollMs = false }: SubscriptionQueryOptions = {},
+) {
+  return useQuery({
+    queryKey: subscriptionKeys.one(mbid),
+    queryFn: () => subscriptionApi.get(mbid),
+    refetchInterval: pollMs,
+  });
+}
+
+export function useRequestSyncMutation() {
+  return useMutation({ mutationFn: (mbid: string) => subscriptionApi.requestSync(mbid) });
+}
 
 export function useSubscriptionsQuery(params: SubscriptionListParams) {
   return useQuery({

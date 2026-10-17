@@ -4,7 +4,8 @@ import styles from './IndexCard.module.css';
 import { tiltOf } from './tilt';
 
 export interface IndexCardProps {
-  title: string;
+  /** Heading content; may be a link. */
+  title: ReactNode;
   /** Short text on the paper tab sticking out above the card (e.g. a country code). */
   tab?: string;
   /** Any stable string (an MBID): the card gets the same slight tilt on every render. */

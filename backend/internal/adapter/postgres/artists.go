@@ -2,10 +2,12 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -39,6 +41,40 @@ func (r *ArtistRepository) Upsert(ctx context.Context, a domain.Artist) error {
 	return nil
 }
 
+func (r *ArtistRepository) Get(ctx context.Context, mbid domain.MBID) (domain.Artist, error) {
+	id, err := toUUID(mbid)
+	if err != nil {
+		return domain.Artist{}, err
+	}
+	row, err := queries(ctx, r.pool).GetArtist(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Artist{}, fmt.Errorf("artist %s: %w", mbid, domain.ErrNotFound)
+	}
+	if err != nil {
+		return domain.Artist{}, fmt.Errorf("get artist %s: %w", mbid, err)
+	}
+	return artistFromRow(row), nil
+}
+
+func (r *ArtistRepository) ListTracked(ctx context.Context) ([]domain.MBID, error) {
+	ids, err := queries(ctx, r.pool).ListTrackedArtists(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list tracked artists: %w", err)
+	}
+	return toMBIDs(ids), nil
+}
+
+func (r *ArtistRepository) MarkSynced(ctx context.Context, mbid domain.MBID, at time.Time) error {
+	id, err := toUUID(mbid)
+	if err != nil {
+		return err
+	}
+	if err := queries(ctx, r.pool).MarkArtistSynced(ctx, sqlc.MarkArtistSyncedParams{Mbid: id, LastSyncedAt: &at}); err != nil {
+		return fmt.Errorf("mark artist %s synced: %w", mbid, err)
+	}
+	return nil
+}
+
 func artistFromRow(a sqlc.Artist) domain.Artist {
 	return domain.Artist{
 		MBID:           domain.MBID(a.Mbid.String()),
@@ -58,6 +94,14 @@ func utcPtr(t *time.Time) *time.Time {
 	}
 	u := t.UTC()
 	return &u
+}
+
+func toMBIDs(ids []uuid.UUID) []domain.MBID {
+	out := make([]domain.MBID, len(ids))
+	for i, id := range ids {
+		out[i] = domain.MBID(id.String())
+	}
+	return out
 }
 
 func toUUID(mbid domain.MBID) (uuid.UUID, error) {

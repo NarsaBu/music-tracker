@@ -28,11 +28,13 @@ type SubscribeResult struct {
 
 // Subscribe starts tracking an artist (US-1). The artist card is fetched from
 // the catalog and stored locally; the subscription baseline is "now" (ADR-3).
+// An artist new to the system gets a baseline sync job right away.
 type Subscribe struct {
 	catalog  usecase.MusicCatalog
 	artists  usecase.ArtistRepository
 	subs     usecase.SubscriptionRepository
 	defaults usecase.FilterDefaultsReader
+	queue    usecase.JobQueue
 	tx       usecase.TxManager
 	clock    usecase.Clock
 }
@@ -42,10 +44,11 @@ func NewSubscribe(
 	artists usecase.ArtistRepository,
 	subs usecase.SubscriptionRepository,
 	defaults usecase.FilterDefaultsReader,
+	queue usecase.JobQueue,
 	tx usecase.TxManager,
 	clock usecase.Clock,
 ) *Subscribe {
-	return &Subscribe{catalog: catalog, artists: artists, subs: subs, defaults: defaults, tx: tx, clock: clock}
+	return &Subscribe{catalog: catalog, artists: artists, subs: subs, defaults: defaults, queue: queue, tx: tx, clock: clock}
 }
 
 func (uc *Subscribe) Execute(ctx context.Context, in SubscribeInput) (SubscribeResult, error) {
@@ -85,7 +88,16 @@ func (uc *Subscribe) Execute(ctx context.Context, in SubscribeInput) (SubscribeR
 		}
 		// Read back: the stored artist keeps its sync state, a concurrent request may have won.
 		sub, err = uc.subs.Get(ctx, artist.MBID)
-		return err
+		if err != nil {
+			return err
+		}
+		if sub.Artist.LastSyncedAt == nil {
+			job := usecase.NewSyncArtistJob(string(artist.MBID), "", "baseline", now)
+			if _, err := uc.queue.Enqueue(ctx, job); err != nil {
+				return fmt.Errorf("enqueue baseline sync: %w", err)
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return SubscribeResult{}, fmt.Errorf("subscribe %s: %w", mbid, err)

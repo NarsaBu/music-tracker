@@ -4,9 +4,11 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
+	"music-tracker/backend/internal/domain"
 	"music-tracker/backend/internal/usecase/artist"
 )
 
@@ -24,14 +26,26 @@ type (
 	SubscriptionLister interface {
 		Execute(ctx context.Context, in artist.ListInput) (artist.ListResult, error)
 	}
+	SubscriptionGetter interface {
+		Execute(ctx context.Context, mbid string) (artist.SubscriptionView, error)
+	}
+	SubscriptionSyncer interface {
+		Execute(ctx context.Context, mbid string) error
+	}
+	ReleaseGroupLister interface {
+		Execute(ctx context.Context, mbid, role string) ([]domain.ArtistReleaseGroup, error)
+	}
 )
 
-// ArtistUseCases groups the catalog search and subscription operations.
+// ArtistUseCases groups the catalog search, subscription and artist catalog operations.
 type ArtistUseCases struct {
-	Search      ArtistSearcher
-	Subscribe   Subscriber
-	Unsubscribe Unsubscriber
-	List        SubscriptionLister
+	Search        ArtistSearcher
+	Subscribe     Subscriber
+	Unsubscribe   Unsubscriber
+	List          SubscriptionLister
+	Get           SubscriptionGetter
+	Sync          SubscriptionSyncer
+	ReleaseGroups ReleaseGroupLister
 }
 
 type artistHandler struct {
@@ -102,4 +116,33 @@ func (h *artistHandler) unsubscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GET /subscriptions/{mbid}
+func (h *artistHandler) get(w http.ResponseWriter, r *http.Request) {
+	v, err := h.uc.Get.Execute(r.Context(), chi.URLParam(r, "mbid"))
+	if err != nil {
+		respondError(h.log, w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toSubscriptionDTO(v))
+}
+
+// POST /subscriptions/{mbid}/sync → 202: the check runs in the background.
+func (h *artistHandler) sync(w http.ResponseWriter, r *http.Request) {
+	if err := h.uc.Sync.Execute(r.Context(), chi.URLParam(r, "mbid")); err != nil {
+		respondError(h.log, w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+
+// GET /artists/{mbid}/release-groups?role=
+func (h *artistHandler) releaseGroups(w http.ResponseWriter, r *http.Request) {
+	items, err := h.uc.ReleaseGroups.Execute(r.Context(), chi.URLParam(r, "mbid"), r.URL.Query().Get("role"))
+	if err != nil {
+		respondError(h.log, w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, itemsDTO[releaseGroupDTO]{Items: mapSlice(items, toReleaseGroupDTO(time.Now().UTC()))})
 }

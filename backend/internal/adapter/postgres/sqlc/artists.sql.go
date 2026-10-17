@@ -7,10 +7,70 @@ package sqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const getArtist = `-- name: GetArtist :one
+SELECT mbid, name, sort_name, disambiguation, type, country, last_synced_at, created_at FROM artists WHERE mbid = $1
+`
+
+func (q *Queries) GetArtist(ctx context.Context, mbid uuid.UUID) (Artist, error) {
+	row := q.db.QueryRow(ctx, getArtist, mbid)
+	var i Artist
+	err := row.Scan(
+		&i.Mbid,
+		&i.Name,
+		&i.SortName,
+		&i.Disambiguation,
+		&i.Type,
+		&i.Country,
+		&i.LastSyncedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listTrackedArtists = `-- name: ListTrackedArtists :many
+SELECT a.mbid FROM artists a JOIN subscriptions s ON s.artist_mbid = a.mbid ORDER BY a.mbid
+`
+
+// Tracked artists are the ones with a subscription (unsubscribed artists are kept but skipped).
+func (q *Queries) ListTrackedArtists(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listTrackedArtists)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var mbid uuid.UUID
+		if err := rows.Scan(&mbid); err != nil {
+			return nil, err
+		}
+		items = append(items, mbid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markArtistSynced = `-- name: MarkArtistSynced :exec
+UPDATE artists SET last_synced_at = $2 WHERE mbid = $1
+`
+
+type MarkArtistSyncedParams struct {
+	Mbid         uuid.UUID
+	LastSyncedAt *time.Time
+}
+
+func (q *Queries) MarkArtistSynced(ctx context.Context, arg MarkArtistSyncedParams) error {
+	_, err := q.db.Exec(ctx, markArtistSynced, arg.Mbid, arg.LastSyncedAt)
+	return err
+}
 
 const upsertArtist = `-- name: UpsertArtist :exec
 INSERT INTO artists (mbid, name, sort_name, disambiguation, type, country)

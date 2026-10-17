@@ -25,3 +25,38 @@ export function subscriptionWire(mbid: string, name: string, lastSyncedAt: strin
     created_at: '2026-10-17T06:00:00Z',
   };
 }
+
+export function syncRunWire(done: number, total: number, finished: boolean, newReleases = 0) {
+  return {
+    id: 'run-1',
+    trigger: 'manual',
+    started_at: '2026-10-17T06:00:00Z',
+    finished_at: finished ? '2026-10-17T06:05:00Z' : null,
+    artists_total: total,
+    artists_done: done,
+    new_releases: newReleases,
+  };
+}
+
+export function releaseGroupWire(
+  mbid: string,
+  title: string,
+  role: 'main' | 'collaboration' | 'featured' = 'main',
+  extra: Record<string, unknown> = {},
+) {
+  return {
+    mbid,
+    title,
+    artist_credit: 'Sigur Rós',
+    credit_role: role,
+    primary_type: 'album',
+    secondary_types: [],
+    first_release_date: '1999-06',
+    is_baseline: true,
+    is_announcement: false,
+    cover_url: `https://coverartarchive.org/release-group/${mbid}/front-250`,
+    musicbrainz_url: `https://musicbrainz.org/release-group/${mbid}`,
+    discovered_at: '2026-10-17T06:00:00Z',
+    ...extra,
+  };
+}

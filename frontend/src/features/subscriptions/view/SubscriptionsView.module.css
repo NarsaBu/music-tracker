@@ -77,3 +77,18 @@
   align-items: center;
   justify-content: center;
 }
+
+.cardLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardLink:hover {
+  text-decoration: underline;
+}
+
+.cardLink:focus-visible {
+  border-radius: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

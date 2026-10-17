@@ -399,6 +399,39 @@ type Artist struct {
 	CreatedAt      time.Time
 }
 
+type ArtistReleaseGroup struct {
+	ArtistMbid       uuid.UUID
+	ReleaseGroupMbid uuid.UUID
+	CreditRole       CreditRole
+	IsBaseline       bool
+	DiscoveredAt     time.Time
+}
+
+type Job struct {
+	ID          int64
+	Kind        string
+	Payload     []byte
+	DedupKey    pgtype.Text
+	RunAt       time.Time
+	Attempts    int32
+	MaxAttempts int32
+	LockedAt    *time.Time
+	LastError   pgtype.Text
+	CreatedAt   time.Time
+}
+
+type ReleaseGroup struct {
+	Mbid             uuid.UUID
+	Title            string
+	PrimaryType      NullReleasePrimaryType
+	SecondaryTypes   []string
+	FirstReleaseDate pgtype.Text
+	FirstReleaseOn   *time.Time
+	ArtistCredit     string
+	DiscoveredAt     time.Time
+	UpdatedAt        time.Time
+}
+
 type Setting struct {
 	ID                     int16
 	PrimaryTypes           []ReleasePrimaryType
@@ -424,4 +457,14 @@ type Subscription struct {
 	IncludeFeatured        pgtype.Bool
 	BaselineAt             time.Time
 	CreatedAt              time.Time
+}
+
+type SyncRun struct {
+	ID           uuid.UUID
+	Trigger      string
+	StartedAt    time.Time
+	FinishedAt   *time.Time
+	ArtistsTotal int32
+	ArtistsDone  int32
+	NewReleases  int32
 }

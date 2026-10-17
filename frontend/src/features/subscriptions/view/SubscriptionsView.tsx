@@ -1,12 +1,20 @@
+import type { ReactNode } from 'react';
+import { Link } from 'react-router';
 import { EngravedInput, IndexCard, LcdDisplay, Led, Panel, PushButton } from '@/shared/ui';
 import type { SubscriptionsViewModel } from '../controller/useSubscriptionsController';
 import styles from './SubscriptionsView.module.css';
 
 const SOURCE_TEXT = { own: 'своё', global: 'общее' } as const;
 
-export function SubscriptionsView(vm: SubscriptionsViewModel) {
+export interface SubscriptionsViewProps extends SubscriptionsViewModel {
+  /** Slot above the drawer, e.g. the sync control. */
+  header?: ReactNode;
+}
+
+export function SubscriptionsView({ header, ...vm }: SubscriptionsViewProps) {
   return (
     <div className={styles.layout}>
+      {header}
       <Panel
         title="Картотека исполнителей"
         extra={
@@ -52,7 +60,11 @@ export function SubscriptionsView(vm: SubscriptionsViewModel) {
           {vm.cards.map((c) => (
             <li key={c.mbid}>
               <IndexCard
-                title={c.name}
+                title={
+                  <Link className={styles.cardLink} to={`/artists/${c.mbid}`}>
+                    {c.name}
+                  </Link>
+                }
                 tab={c.country ?? undefined}
                 tiltSeed={c.mbid}
                 extra={<Led state={c.synced ? 'ok' : 'warn'} label={c.syncText} />}

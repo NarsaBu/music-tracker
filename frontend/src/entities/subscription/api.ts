@@ -55,8 +55,18 @@ export function createSubscriptionApi(http: HttpClient) {
         },
         subscriptionSchema,
       ),
+    get: (mbid: string): Promise<Subscription> =>
+      http.get(`/api/v1/subscriptions/${encodeURIComponent(mbid)}`, subscriptionSchema),
     unsubscribe: (mbid: string): Promise<void> =>
       http.delete(`/api/v1/subscriptions/${encodeURIComponent(mbid)}`),
+    /** Queues a check of one artist; it runs in the background (202). */
+    requestSync: async (mbid: string): Promise<void> => {
+      await http.post(
+        `/api/v1/subscriptions/${encodeURIComponent(mbid)}/sync`,
+        undefined,
+        z.undefined(),
+      );
+    },
   };
 }
 

@@ -75,10 +75,10 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
 |-------|------|----------|
 | GET | `/subscriptions?q=&limit=&offset=` | Список подписок |
 | POST | `/subscriptions` | `{mbid, include_featured?, primary_types?, excluded_secondary_types?}` → 201 + подписка (повтор → 200, переопределения не меняются); отсутствующее/`null` поле = глобальная настройка, `[]` — явное переопределение |
-| GET | `/subscriptions/{mbid}` | Подписка + последние релиз-группы |
+| GET | `/subscriptions/{mbid}` | Подписка (формат — как элемент списка); каталог — `GET /artists/{mbid}/release-groups` |
 | PATCH | `/subscriptions/{mbid}` | Переопределения `{primary_types?, excluded_secondary_types?, include_featured?}`; `null` = сброс на глобальные |
 | DELETE | `/subscriptions/{mbid}` | 204 |
-| POST | `/subscriptions/{mbid}/sync` | Ручная проверка исполнителя → 202 |
+| POST | `/subscriptions/{mbid}/sync` | Ручная проверка исполнителя → 202 без тела (задача в очереди; пока она не выполнена, повтор не добавляет новую). Завершение видно по `last_synced_at` |
 
 ```json
 // GET /subscriptions
@@ -126,7 +126,7 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
 | Метод | Путь | Описание |
 |-------|------|----------|
 | GET | `/releases?limit=&cursor=&type=album&role=featured` | Лента найденных новинок |
-| GET | `/artists/{mbid}/release-groups?role=` | Полный каталог исполнителя (из БД) |
+| GET | `/artists/{mbid}/release-groups?role=` | Полный каталог исполнителя (из БД): новые и без даты сверху. Элемент: `mbid, title, artist_credit, credit_role, primary_type, secondary_types, first_release_date, is_baseline, is_announcement, cover_url, musicbrainz_url, discovered_at` |
 
 ```json
 {
@@ -181,8 +181,21 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
 
 | Метод | Путь | Описание |
 |-------|------|----------|
-| POST | `/sync` | Ручной запуск для всех подписок → 202 |
-| GET | `/sync/runs/latest` | Статус последнего прогона (для индикатора прогресса) |
+| POST | `/sync` | Ручной запуск для всех подписок → 202 + прогон; если прогон уже идёт — возвращается он |
+| GET | `/sync/runs/latest` | Последний прогон или `null` |
+
+```json
+// GET /sync/runs/latest
+{
+  "id": "…",
+  "trigger": "manual",              // manual | schedule
+  "started_at": "2026-10-17T06:00:00Z",
+  "finished_at": null,              // null — прогон идёт
+  "artists_total": 40,
+  "artists_done": 12,
+  "new_releases": 1                 // не baseline и не устаревшие
+}
+```
 
 ## 9. Фиды (без сессии, по токену)
 

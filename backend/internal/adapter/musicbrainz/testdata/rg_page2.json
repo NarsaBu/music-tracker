@@ -1,0 +1,81 @@
+{
+    "release-groups": [
+        {
+            "disambiguation": "",
+            "title": "Með suð í eyrum við spilum endalaust",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "secondary-types": [],
+            "primary-type": "Album",
+            "artist-credit": [
+                {
+                    "artist": {
+                        "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                        "name": "Sigur Rós",
+                        "sort-name": "Sigur Rós",
+                        "id": "f6f2326f-6b25-4170-b89d-e235b25508e8",
+                        "type": "Group",
+                        "country": "IS",
+                        "disambiguation": "Icelandic post‐rock band"
+                    },
+                    "name": "Sigur Rós",
+                    "joinphrase": ""
+                }
+            ],
+            "first-release-date": "2008-06-23",
+            "id": "15143341-de7d-3c64-90a1-2fffe2c4b5a9",
+            "secondary-type-ids": []
+        },
+        {
+            "secondary-type-ids": [],
+            "id": "47d8e9e2-dc13-3d94-afee-1f8c38cec091",
+            "artist-credit": [
+                {
+                    "artist": {
+                        "type": "Group",
+                        "disambiguation": "Icelandic post‐rock band",
+                        "country": "IS",
+                        "sort-name": "Sigur Rós",
+                        "name": "Sigur Rós",
+                        "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                        "id": "f6f2326f-6b25-4170-b89d-e235b25508e8"
+                    },
+                    "name": "Sigur Rós",
+                    "joinphrase": ""
+                }
+            ],
+            "first-release-date": "2005-09-07",
+            "primary-type": "Album",
+            "secondary-types": [],
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "disambiguation": "",
+            "title": "Takk…"
+        },
+        {
+            "secondary-type-ids": [],
+            "id": "7c78acfc-3253-42b9-abdf-06085e99d71b",
+            "primary-type": "Album",
+            "artist-credit": [
+                {
+                    "joinphrase": "",
+                    "name": "Sigur Rós",
+                    "artist": {
+                        "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                        "name": "Sigur Rós",
+                        "sort-name": "Sigur Rós",
+                        "id": "f6f2326f-6b25-4170-b89d-e235b25508e8",
+                        "type": "Group",
+                        "country": "IS",
+                        "disambiguation": "Icelandic post‐rock band"
+                    }
+                }
+            ],
+            "first-release-date": "2012-05-23",
+            "secondary-types": [],
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Valtari",
+            "disambiguation": ""
+        }
+    ],
+    "release-group-offset": 3,
+    "release-group-count": 6
+}

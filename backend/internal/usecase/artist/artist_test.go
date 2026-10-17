@@ -8,17 +8,19 @@ import (
 	"time"
 
 	"music-tracker/backend/internal/domain"
+	"music-tracker/backend/internal/usecase"
+	"music-tracker/backend/internal/usecase/memory"
 )
 
 func TestSearchArtists_MarksSubscribed(t *testing.T) {
-	store := newMemStore()
-	store.subs[nirvana] = domain.Subscription{}
+	store := memory.NewStore()
+	store.Subs[nirvana] = domain.Subscription{}
 	catalog := &fakeCatalog{found: []domain.ArtistCandidate{
 		{Artist: domain.Artist{MBID: nirvana, Name: "Nirvana"}, Score: 100},
 		{Artist: domain.Artist{MBID: radiohead, Name: "Radiohead"}, Score: 40},
 	}}
 
-	got, err := NewSearchArtists(catalog, store).Execute(context.Background(), SearchInput{Query: "  nirvana "})
+	got, err := NewSearchArtists(catalog, store.SubscriptionRepo()).Execute(context.Background(), SearchInput{Query: "  nirvana "})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +44,7 @@ func TestSearchArtists_Validation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewSearchArtists(&fakeCatalog{}, newMemStore()).Execute(context.Background(), tt.in)
+			_, err := NewSearchArtists(&fakeCatalog{}, memory.NewStore().SubscriptionRepo()).Execute(context.Background(), tt.in)
 			if !errors.Is(err, domain.ErrValidation) {
 				t.Errorf("error = %v, want ErrValidation", err)
 			}
@@ -52,19 +54,20 @@ func TestSearchArtists_Validation(t *testing.T) {
 
 func TestSearchArtists_UpstreamErrorIsWrapped(t *testing.T) {
 	catalog := &fakeCatalog{err: domain.ErrUpstreamUnavailable}
-	_, err := NewSearchArtists(catalog, newMemStore()).Execute(context.Background(), SearchInput{Query: "x"})
+	_, err := NewSearchArtists(catalog, memory.NewStore().SubscriptionRepo()).Execute(context.Background(), SearchInput{Query: "x"})
 	if !errors.Is(err, domain.ErrUpstreamUnavailable) {
 		t.Errorf("error = %v, want ErrUpstreamUnavailable", err)
 	}
 }
 
-func newSubscribe(catalog *fakeCatalog, store *memStore, now time.Time) *Subscribe {
-	return NewSubscribe(catalog, store, store, defaultFilter, noTx{}, fixedClock(now))
+func newSubscribe(catalog *fakeCatalog, store *memory.Store, now time.Time) *Subscribe {
+	return NewSubscribe(catalog, store.ArtistRepo(), store.SubscriptionRepo(), store, store.Queue(),
+		memory.TxManager{}, &memory.Clock{T: now})
 }
 
 func TestSubscribe_CreatesWithBaselineAndOverride(t *testing.T) {
 	now := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
-	store := newMemStore()
+	store := memory.NewStore()
 	catalog := &fakeCatalog{artists: map[domain.MBID]domain.Artist{
 		nirvana: {MBID: nirvana, Name: "Nirvana", SortName: "Nirvana"},
 	}}
@@ -86,13 +89,34 @@ func TestSubscribe_CreatesWithBaselineAndOverride(t *testing.T) {
 	if f := res.Filter; !f.IncludeFeatured.Overridden || !f.IncludeFeatured.Value || f.PrimaryTypes.Overridden {
 		t.Errorf("filter = %+v", f)
 	}
-	if _, ok := store.artists[nirvana]; !ok {
+	if _, ok := store.Artists[nirvana]; !ok {
 		t.Error("artist was not stored")
+	}
+	if len(store.Jobs) != 1 || store.Jobs[0].DedupKey != "sync_artist:baseline:"+string(nirvana) {
+		t.Errorf("jobs = %+v, want one baseline sync", store.Jobs)
+	}
+}
+
+func TestSubscribe_KnownSyncedArtistNeedsNoBaseline(t *testing.T) {
+	store := memory.NewStore()
+	synced := time.Now()
+	store.Artists[nirvana] = domain.Artist{MBID: nirvana, Name: "Nirvana", LastSyncedAt: &synced}
+	catalog := &fakeCatalog{artists: map[domain.MBID]domain.Artist{nirvana: {MBID: nirvana, Name: "Nirvana"}}}
+
+	res, err := newSubscribe(catalog, store, time.Now()).Execute(context.Background(), SubscribeInput{MBID: string(nirvana)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(store.Jobs) != 0 {
+		t.Errorf("jobs = %+v, want none", store.Jobs)
+	}
+	if res.Artist.LastSyncedAt == nil {
+		t.Error("the stored sync state must be returned")
 	}
 }
 
 func TestSubscribe_RepeatIsIdempotentAndSkipsCatalog(t *testing.T) {
-	store := newMemStore()
+	store := memory.NewStore()
 	catalog := &fakeCatalog{artists: map[domain.MBID]domain.Artist{nirvana: {MBID: nirvana, Name: "Nirvana"}}}
 	uc := newSubscribe(catalog, store, time.Now())
 
@@ -127,7 +151,7 @@ func TestSubscribe_Errors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := newSubscribe(tt.catalog, newMemStore(), time.Now()).Execute(context.Background(), tt.in)
+			_, err := newSubscribe(tt.catalog, memory.NewStore(), time.Now()).Execute(context.Background(), tt.in)
 			if !errors.Is(err, tt.want) {
 				t.Errorf("error = %v, want %v", err, tt.want)
 			}
@@ -136,14 +160,14 @@ func TestSubscribe_Errors(t *testing.T) {
 }
 
 func TestUnsubscribe(t *testing.T) {
-	store := newMemStore()
-	store.subs[nirvana] = domain.Subscription{}
-	uc := NewUnsubscribe(store)
+	store := memory.NewStore()
+	store.Subs[nirvana] = domain.Subscription{}
+	uc := NewUnsubscribe(store.SubscriptionRepo())
 
 	if err := uc.Execute(context.Background(), string(nirvana)); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := store.subs[nirvana]; ok {
+	if _, ok := store.Subs[nirvana]; ok {
 		t.Error("subscription still exists")
 	}
 	if err := uc.Execute(context.Background(), string(nirvana)); !errors.Is(err, domain.ErrNotFound) {
@@ -155,15 +179,15 @@ func TestUnsubscribe(t *testing.T) {
 }
 
 func TestListSubscriptions(t *testing.T) {
-	store := newMemStore()
+	store := memory.NewStore()
 	for _, a := range []domain.Artist{
 		{MBID: radiohead, Name: "Radiohead", SortName: "Radiohead"},
 		{MBID: nirvana, Name: "Nirvana", SortName: "Nirvana"},
 	} {
-		store.artists[a.MBID] = a
-		store.subs[a.MBID] = domain.Subscription{}
+		store.Artists[a.MBID] = a
+		store.Subs[a.MBID] = domain.Subscription{}
 	}
-	uc := NewListSubscriptions(store, defaultFilter)
+	uc := NewListSubscriptions(store.SubscriptionRepo(), store)
 
 	res, err := uc.Execute(context.Background(), ListInput{Limit: 1})
 	if err != nil {
@@ -180,3 +204,28 @@ func TestListSubscriptions(t *testing.T) {
 		t.Errorf("negative offset: error = %v, want ErrValidation", err)
 	}
 }
+
+func TestListReleaseGroups(t *testing.T) {
+	store := memory.NewStore()
+	store.Artists[nirvana] = domain.Artist{MBID: nirvana}
+	rg := domain.ReleaseGroup{MBID: radiohead, Title: "Collab"}
+	store.Releases[rg.MBID] = rg
+	store.Links[nirvana] = []domain.ArtistReleaseGroup{{ArtistMBID: nirvana, ReleaseGroup: rg, Role: domain.RoleFeatured}}
+	uc := NewListReleaseGroups(store.ArtistRepo(), store.ReleaseRepo())
+
+	got, err := uc.Execute(context.Background(), string(nirvana), "featured")
+	if err != nil || len(got) != 1 || got[0].ReleaseGroup.Title != "Collab" {
+		t.Errorf("featured = %+v, %v", got, err)
+	}
+	if got, _ := uc.Execute(context.Background(), string(nirvana), "main"); len(got) != 0 {
+		t.Errorf("main = %+v, want none", got)
+	}
+	if _, err := uc.Execute(context.Background(), string(nirvana), "guest"); !errors.Is(err, domain.ErrValidation) {
+		t.Errorf("unknown role: %v, want ErrValidation", err)
+	}
+	if _, err := uc.Execute(context.Background(), string(radiohead), ""); !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("unknown artist: %v, want ErrNotFound", err)
+	}
+}
+
+var _ usecase.MusicCatalog = (*fakeCatalog)(nil)

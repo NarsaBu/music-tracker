@@ -14,6 +14,7 @@ type Deps struct {
 	Logger    *slog.Logger
 	Readiness Pinger
 	Artists   ArtistUseCases
+	Sync      SyncUseCases
 }
 
 func NewRouter(d Deps) http.Handler {
@@ -28,14 +29,20 @@ func NewRouter(d Deps) http.Handler {
 	r.Get("/readyz", health.ready)
 
 	artists := &artistHandler{uc: d.Artists, log: d.Logger}
+	sync := &syncHandler{uc: d.Sync, log: d.Logger}
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/catalog/artists", artists.search)
 		r.Route("/subscriptions", func(r chi.Router) {
 			r.Get("/", artists.list)
 			r.Post("/", artists.subscribe)
+			r.Get("/{mbid}", artists.get)
 			r.Delete("/{mbid}", artists.unsubscribe)
+			r.Post("/{mbid}/sync", artists.sync)
 		})
+		r.Get("/artists/{mbid}/release-groups", artists.releaseGroups)
+		r.Post("/sync", sync.start)
+		r.Get("/sync/runs/latest", sync.latest)
 
 		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 			writeProblem(w, r, http.StatusNotFound, "Not found", "")

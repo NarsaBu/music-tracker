@@ -7,3 +7,13 @@ SET name           = EXCLUDED.name,
     disambiguation = EXCLUDED.disambiguation,
     type           = EXCLUDED.type,
     country        = EXCLUDED.country;
+
+-- name: GetArtist :one
+SELECT * FROM artists WHERE mbid = $1;
+
+-- Tracked artists are the ones with a subscription (unsubscribed artists are kept but skipped).
+-- name: ListTrackedArtists :many
+SELECT a.mbid FROM artists a JOIN subscriptions s ON s.artist_mbid = a.mbid ORDER BY a.mbid;
+
+-- name: MarkArtistSynced :exec
+UPDATE artists SET last_synced_at = $2 WHERE mbid = $1;

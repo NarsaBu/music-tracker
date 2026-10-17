@@ -7,14 +7,20 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	httpadapter "music-tracker/backend/internal/adapter/http"
 	"music-tracker/backend/internal/adapter/musicbrainz"
 	"music-tracker/backend/internal/adapter/postgres"
+	"music-tracker/backend/internal/domain"
 	"music-tracker/backend/internal/infrastructure/config"
+	"music-tracker/backend/internal/infrastructure/jobs"
 	"music-tracker/backend/internal/infrastructure/observability"
+	"music-tracker/backend/internal/infrastructure/scheduler"
 	"music-tracker/backend/internal/usecase"
 	"music-tracker/backend/internal/usecase/artist"
+	syncuc "music-tracker/backend/internal/usecase/sync"
 )
 
 func serve(ctx context.Context) error {
@@ -54,18 +60,58 @@ func serve(ctx context.Context) error {
 	artists := postgres.NewArtistRepository(pool)
 	subs := postgres.NewSubscriptionRepository(pool)
 	settings := postgres.NewSettingsRepository(pool)
+	releases := postgres.NewReleaseGroupRepository(pool)
+	runs := postgres.NewSyncRunRepository(pool)
+	queue := postgres.NewJobQueue(pool)
 	clock := usecase.SystemClock{}
+
+	syncArtist := syncuc.NewArtist(catalog, artists, releases, runs, tx, clock, syncuc.Config{
+		StaleThreshold: time.Duration(cfg.Sync.StaleDays) * 24 * time.Hour,
+	})
+	scheduleRun := syncuc.NewScheduleSyncRun(artists, runs, queue, tx, clock)
 
 	router := httpadapter.NewRouter(httpadapter.Deps{
 		Logger:    log,
 		Readiness: pool,
 		Artists: httpadapter.ArtistUseCases{
-			Search:      artist.NewSearchArtists(catalog, subs),
-			Subscribe:   artist.NewSubscribe(catalog, artists, subs, settings, tx, clock),
-			Unsubscribe: artist.NewUnsubscribe(subs),
-			List:        artist.NewListSubscriptions(subs, settings),
+			Search:        artist.NewSearchArtists(catalog, subs),
+			Subscribe:     artist.NewSubscribe(catalog, artists, subs, settings, queue, tx, clock),
+			Unsubscribe:   artist.NewUnsubscribe(subs),
+			List:          artist.NewListSubscriptions(subs, settings),
+			Get:           artist.NewGetSubscription(subs, settings),
+			Sync:          syncuc.NewRequestArtist(subs, queue, clock),
+			ReleaseGroups: artist.NewListReleaseGroups(artists, releases),
+		},
+		Sync: httpadapter.SyncUseCases{
+			Start:  scheduleRun,
+			Latest: syncuc.NewLatestSyncRun(runs),
 		},
 	})
+
+	// Background work stops with ctx; serve returns only after it has finished.
+	ctx, stopBackground := context.WithCancel(ctx)
+	var background sync.WaitGroup
+	defer func() {
+		stopBackground()
+		background.Wait()
+	}()
+
+	runner := jobs.NewRunner(queue, jobs.Config{Concurrency: cfg.Worker.Concurrency}, log)
+	runner.Register(usecase.JobSyncArtist, syncArtist)
+	background.Go(func() { runner.Run(ctx) })
+
+	sched := scheduler.New(log)
+	err = sched.Add(ctx, "sync", cfg.Sync.Cron, func(ctx context.Context) error {
+		run, started, err := scheduleRun.Execute(ctx, domain.TriggerSchedule)
+		if err == nil && started {
+			log.InfoContext(ctx, "sync run started", slog.String("run_id", run.ID), slog.Int("artists", run.ArtistsTotal))
+		}
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	background.Go(func() { sched.Run(ctx) })
 
 	srv := &http.Server{
 		Addr:              cfg.HTTP.Addr,

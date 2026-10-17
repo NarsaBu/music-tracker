@@ -31,6 +31,13 @@ describe('FetchHttpClient', () => {
     expect(new Headers(init.headers).get('Content-Type')).toBe('application/json');
   });
 
+  it('treats an empty body as undefined, whatever the status', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
+    const client = new FetchHttpClient({ fetchImpl });
+
+    await expect(client.post('/x', undefined, z.undefined())).resolves.toBeUndefined();
+  });
+
   it('maps problem details to ApiError', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(
       jsonResponse(

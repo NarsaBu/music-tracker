@@ -16,13 +16,14 @@
 - [x] UI: поиск исполнителя (тюнер), список подписок (картотека)
 - Отложено: `GET /catalog/artists/{mbid}`, `GET/PATCH /subscriptions/{mbid}` (этапы 2–3); задача `sync_artist(baseline)` при подписке — этап 2
 
-## Этап 2. Синхронизация
-- [ ] Таблицы `release_groups`, `artist_release_groups`, `jobs`, `sync_runs`
-- [ ] Очередь задач на `SKIP LOCKED`, воркеры
-- [ ] `domain.RoleOf` — классификация main/collaboration/featured
-- [ ] `SyncArtist` с baseline, stale-фильтром и ролями
-- [ ] Планировщик + ручной запуск
-- [ ] UI: каталог исполнителя, кнопка «Проверить сейчас»
+## Этап 2. Синхронизация ✅
+- [x] Таблицы `release_groups`, `artist_release_groups`, `jobs`, `sync_runs`
+- [x] Очередь задач на `SKIP LOCKED`, воркеры
+- [x] `domain.RoleOf` — классификация main/collaboration/featured
+- [x] `SyncArtist` с baseline, stale-фильтром и ролями
+- [x] Планировщик + ручной запуск
+- [x] UI: каталог исполнителя, кнопка «Проверить сейчас»
+- Отложено: CLI `tracker sync --artist`; пересчёт роли и удаление связей у уже известных релиз-групп (сейчас роль фиксируется при обнаружении)
 
 ## Этап 3. Фильтры и уведомления
 - [ ] Глобальные фильтры, override в подписке (типы + `include_featured`), `ReleaseFilter`

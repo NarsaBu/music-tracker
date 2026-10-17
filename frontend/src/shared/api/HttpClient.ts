@@ -65,7 +65,9 @@ export class FetchHttpClient implements HttpClient {
     schema: S,
   ): Promise<z.infer<S>> {
     const res = await this.send(path, init);
-    const data: unknown = res.status === 204 ? undefined : await res.json();
+    // 204, or 202 without a body: there is nothing to parse.
+    const text = await res.text();
+    const data: unknown = text ? JSON.parse(text) : undefined;
     const parsed = schema.safeParse(data);
     if (!parsed.success) throw new ApiContractError(path, parsed.error);
     return parsed.data;
