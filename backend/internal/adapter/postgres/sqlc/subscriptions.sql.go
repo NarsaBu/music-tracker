@@ -187,3 +187,29 @@ func (q *Queries) SubscribedAmong(ctx context.Context, mbids []uuid.UUID) ([]uui
 	}
 	return items, nil
 }
+
+const updateSubscriptionOverride = `-- name: UpdateSubscriptionOverride :execrows
+UPDATE subscriptions
+SET primary_types = $2, excluded_secondary_types = $3, include_featured = $4
+WHERE artist_mbid = $1
+`
+
+type UpdateSubscriptionOverrideParams struct {
+	ArtistMbid             uuid.UUID
+	PrimaryTypes           []ReleasePrimaryType
+	ExcludedSecondaryTypes []string
+	IncludeFeatured        pgtype.Bool
+}
+
+func (q *Queries) UpdateSubscriptionOverride(ctx context.Context, arg UpdateSubscriptionOverrideParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateSubscriptionOverride,
+		arg.ArtistMbid,
+		arg.PrimaryTypes,
+		arg.ExcludedSecondaryTypes,
+		arg.IncludeFeatured,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}

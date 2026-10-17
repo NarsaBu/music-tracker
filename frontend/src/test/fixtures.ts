@@ -60,3 +60,47 @@ export function releaseGroupWire(
     ...extra,
   };
 }
+
+export function settingsWire(
+  overrides: { emailEnabled?: boolean; to?: string; next?: string | null } = {},
+) {
+  return {
+    filters: {
+      primary_types: ['album', 'ep', 'single'],
+      excluded_secondary_types: ['Compilation', 'DJ-mix'],
+      include_featured: false,
+      notify_announcements: true,
+    },
+    email: {
+      enabled: overrides.emailEnabled ?? false,
+      to: overrides.to ?? '',
+      digest: { frequency: 'daily', weekday: 5, time: '09:00', timezone: 'UTC' },
+      last_digest_at: null,
+      next_digest_at: overrides.next ?? null,
+    },
+    rss: { enabled: true, feed_url: 'http://localhost:5173/feeds/tok.atom' },
+  };
+}
+
+export function feedReleaseWire(n: number, extra: Record<string, unknown> = {}) {
+  const mbid = `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
+  return {
+    id: `10000000-0000-0000-0000-${String(n).padStart(12, '0')}`,
+    mbid,
+    title: `Release ${n}`,
+    artist_credit: 'Sigur Rós',
+    found_via: {
+      mbid: 'f6f2326f-6b25-4170-b89d-e235b25508e8',
+      name: 'Sigur Rós',
+      credit_role: 'main',
+    },
+    primary_type: 'album',
+    secondary_types: [],
+    first_release_date: '2026-10-10',
+    is_announcement: false,
+    cover_url: `https://coverartarchive.org/release-group/${mbid}/front-250`,
+    musicbrainz_url: `https://musicbrainz.org/release-group/${mbid}`,
+    discovered_at: '2026-10-17T06:03:00Z',
+    ...extra,
+  };
+}

@@ -3,7 +3,7 @@ import { artistKeys } from '@/entities/artist/queries';
 import type { ArtistCandidate } from '@/entities/artist/model';
 import { httpClient } from '@/shared/api';
 import { createSubscriptionApi } from './api';
-import type { SubscribeRequest, SubscriptionListParams } from './model';
+import type { FilterPatch, SubscribeRequest, SubscriptionListParams } from './model';
 
 const subscriptionApi = createSubscriptionApi(httpClient);
 
@@ -26,6 +26,17 @@ export function useSubscriptionQuery(
     queryKey: subscriptionKeys.one(mbid),
     queryFn: () => subscriptionApi.get(mbid),
     refetchInterval: pollMs,
+  });
+}
+
+export function useUpdateFilterMutation(mbid: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: FilterPatch) => subscriptionApi.updateFilter(mbid, patch),
+    onSuccess: (sub) => {
+      queryClient.setQueryData(subscriptionKeys.one(mbid), sub);
+      return queryClient.invalidateQueries({ queryKey: [...subscriptionKeys.all, 'list'] });
+    },
   });
 }
 

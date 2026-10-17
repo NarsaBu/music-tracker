@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><title>{{.Subject}}</title></head>
+<body style="margin:0;padding:24px;background:#2b2420;font-family:'IBM Plex Sans',Arial,sans-serif;color:#2b241a">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;background:#efe6d2;border-radius:6px">
+<tr><td style="padding:24px 24px 8px">
+  <h1 style="margin:0;font-size:20px">{{.Subject}}</h1>
+</td></tr>
+{{range .Sections}}
+<tr><td style="padding:16px 24px 0">
+  <h2 style="margin:0 0 8px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#9b1c0c">{{.Title}}</h2>
+  {{range .Artists}}
+  <h3 style="margin:12px 0 6px;font-size:16px">{{.Name}}</h3>
+  {{range .Releases}}
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 10px"><tr>
+    <td style="padding-right:12px;vertical-align:top">
+      <a href="{{.URL}}"><img src="{{.CoverURL}}" width="64" height="64" alt="" style="display:block;border-radius:2px;background:#d9ccb0"></a>
+    </td>
+    <td style="vertical-align:top;font-size:14px;line-height:1.4">
+      <a href="{{.URL}}" style="color:#2b241a;font-weight:600">{{.Title}}</a><br>
+      <span style="color:#55554e">{{.Credit}}</span><br>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:12px;color:#55554e">{{if .Type}}{{.Type}} · {{end}}{{.Date}}</span>
+    </td>
+  </tr></table>
+  {{end}}{{end}}
+</td></tr>
+{{end}}
+<tr><td style="padding:16px 24px 24px;font-size:12px;color:#55554e">
+  Music Tracker{{if .AppURL}} · <a href="{{.AppURL}}" style="color:#55554e">{{.AppURL}}</a>{{end}}<br>
+  Всего релизов: {{.Total}}. Настройки рассылки — в разделе Settings.
+</td></tr>
+</table>
+</body>
+</html>

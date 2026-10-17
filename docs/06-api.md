@@ -76,7 +76,7 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
 | GET | `/subscriptions?q=&limit=&offset=` | Список подписок |
 | POST | `/subscriptions` | `{mbid, include_featured?, primary_types?, excluded_secondary_types?}` → 201 + подписка (повтор → 200, переопределения не меняются); отсутствующее/`null` поле = глобальная настройка, `[]` — явное переопределение |
 | GET | `/subscriptions/{mbid}` | Подписка (формат — как элемент списка); каталог — `GET /artists/{mbid}/release-groups` |
-| PATCH | `/subscriptions/{mbid}` | Переопределения `{primary_types?, excluded_secondary_types?, include_featured?}`; `null` = сброс на глобальные |
+| PATCH | `/subscriptions/{mbid}` | Переопределения `{primary_types?, excluded_secondary_types?, include_featured?}`: поле отсутствует — не меняется, `null` — сброс на глобальные, `[]` — явное «ничего». Ответ — подписка |
 | DELETE | `/subscriptions/{mbid}` | 204 |
 | POST | `/subscriptions/{mbid}/sync` | Ручная проверка исполнителя → 202 без тела (задача в очереди; пока она не выполнена, повтор не добавляет новую). Завершение видно по `last_synced_at` |
 
@@ -125,7 +125,7 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
 
 | Метод | Путь | Описание |
 |-------|------|----------|
-| GET | `/releases?limit=&cursor=&type=album&role=featured` | Лента найденных новинок |
+| GET | `/releases?limit=&cursor=&type=album&role=featured` | Лента найденных новинок: `limit` ≤ 100 (по умолчанию 50), курсор непрозрачный; элемент дополнительно содержит `id` уведомления |
 | GET | `/artists/{mbid}/release-groups?role=` | Полный каталог исполнителя (из БД): новые и без даты сверху. Элемент: `mbid, title, artist_credit, credit_role, primary_type, secondary_types, first_release_date, is_baseline, is_announcement, cover_url, musicbrainz_url, discovered_at` |
 
 ```json
@@ -153,9 +153,9 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
 
 | Метод | Путь | Описание |
 |-------|------|----------|
-| GET | `/settings` | Текущие настройки (+ вычисленный `next_digest_at`) |
+| GET | `/settings` | Текущие настройки: тело как у `PUT` плюс `email.last_digest_at`, `email.next_digest_at` (null — email выключен) и `rss.feed_url`. Ответ `GET` можно отправить в `PUT` как есть (read-only поля игнорируются) |
 | PUT | `/settings` | Обновление |
-| POST | `/settings/email/test` | Отправить тестовое письмо → 204 |
+| POST | `/settings/email/test` | Отправить тестовое письмо на **сохранённый** адрес → 204; нет адреса → 422; SMTP недоступен или не настроен → 503 |
 | POST | `/settings/feed-token/rotate` | Перевыпуск RSS-токена → `{feed_url}` |
 | GET | `/meta/release-types` | Справочник primary/secondary types для UI |
 

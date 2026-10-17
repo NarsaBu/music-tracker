@@ -96,6 +96,26 @@ func (r *SubscriptionRepository) List(ctx context.Context, q usecase.Subscriptio
 	return out, int(total), nil
 }
 
+func (r *SubscriptionRepository) UpdateOverride(ctx context.Context, artist domain.MBID, o domain.FilterOverride) error {
+	id, err := toUUID(artist)
+	if err != nil {
+		return err
+	}
+	n, err := queries(ctx, r.pool).UpdateSubscriptionOverride(ctx, sqlc.UpdateSubscriptionOverrideParams{
+		ArtistMbid:             id,
+		PrimaryTypes:           toPrimaryTypes(o.PrimaryTypes),
+		ExcludedSecondaryTypes: o.ExcludedSecondaryTypes,
+		IncludeFeatured:        optionalBool(o.IncludeFeatured),
+	})
+	if err != nil {
+		return fmt.Errorf("update subscription %s: %w", artist, err)
+	}
+	if n == 0 {
+		return fmt.Errorf("subscription %s: %w", artist, domain.ErrNotFound)
+	}
+	return nil
+}
+
 func (r *SubscriptionRepository) SubscribedAmong(ctx context.Context, artists []domain.MBID) (map[domain.MBID]bool, error) {
 	ids := make([]uuid.UUID, 0, len(artists))
 	for _, a := range artists {

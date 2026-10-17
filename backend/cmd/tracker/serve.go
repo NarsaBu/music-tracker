@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"music-tracker/backend/internal/adapter/email"
 	httpadapter "music-tracker/backend/internal/adapter/http"
 	"music-tracker/backend/internal/adapter/musicbrainz"
 	"music-tracker/backend/internal/adapter/postgres"
@@ -20,6 +21,8 @@ import (
 	"music-tracker/backend/internal/infrastructure/scheduler"
 	"music-tracker/backend/internal/usecase"
 	"music-tracker/backend/internal/usecase/artist"
+	"music-tracker/backend/internal/usecase/notify"
+	settingsuc "music-tracker/backend/internal/usecase/settings"
 	syncuc "music-tracker/backend/internal/usecase/sync"
 )
 
@@ -63,11 +66,27 @@ func serve(ctx context.Context) error {
 	releases := postgres.NewReleaseGroupRepository(pool)
 	runs := postgres.NewSyncRunRepository(pool)
 	queue := postgres.NewJobQueue(pool)
+	notifications := postgres.NewNotificationRepository(pool)
 	clock := usecase.SystemClock{}
 
-	syncArtist := syncuc.NewArtist(catalog, artists, releases, runs, tx, clock, syncuc.Config{
+	mailer, err := email.NewMailer(email.Config{
+		Host: cfg.SMTP.Host, Port: cfg.SMTP.Port, User: cfg.SMTP.User, Password: cfg.SMTP.Password,
+		From: cfg.SMTP.From, AppURL: cfg.PublicBaseURL,
+	})
+	if err != nil {
+		return err
+	}
+	if cfg.SMTP.Host == "" {
+		log.Warn("SMTP_HOST is not set: email digests cannot be sent")
+	}
+
+	fanout := notify.NewFanOut(settings, subs, notifications, clock)
+	syncArtist := syncuc.NewArtist(catalog, artists, subs, releases, runs, fanout, tx, clock, syncuc.Config{
 		StaleThreshold: time.Duration(cfg.Sync.StaleDays) * 24 * time.Hour,
 	})
+	scheduleDigest := notify.NewScheduleDigest(settings, queue, clock)
+	sendDigest := notify.NewSendDigest(settings, notifications, mailer, tx, clock)
+	settingsCfg := settingsuc.Config{PublicBaseURL: cfg.PublicBaseURL}
 	scheduleRun := syncuc.NewScheduleSyncRun(artists, runs, queue, tx, clock)
 
 	router := httpadapter.NewRouter(httpadapter.Deps{
@@ -81,11 +100,21 @@ func serve(ctx context.Context) error {
 			Get:           artist.NewGetSubscription(subs, settings),
 			Sync:          syncuc.NewRequestArtist(subs, queue, clock),
 			ReleaseGroups: artist.NewListReleaseGroups(artists, releases),
+			Update:        artist.NewUpdateSubscription(subs, settings),
 		},
 		Sync: httpadapter.SyncUseCases{
 			Start:  scheduleRun,
 			Latest: syncuc.NewLatestSyncRun(runs),
 		},
+		Settings: httpadapter.SettingsUseCases{
+			Get:       settingsuc.NewGet(settings, settingsCfg),
+			Update:    settingsuc.NewUpdate(settings, clock, settingsCfg),
+			Rotate:    settingsuc.NewRotateFeedToken(settings, settingsCfg),
+			TestEmail: notify.NewSendTestEmail(settings, mailer),
+		},
+		Releases: notify.NewListReleases(notifications),
+		Feeds:    notify.NewBuildFeed(settings, notifications),
+		AppURL:   cfg.PublicBaseURL,
 	})
 
 	// Background work stops with ctx; serve returns only after it has finished.
@@ -98,6 +127,7 @@ func serve(ctx context.Context) error {
 
 	runner := jobs.NewRunner(queue, jobs.Config{Concurrency: cfg.Worker.Concurrency}, log)
 	runner.Register(usecase.JobSyncArtist, syncArtist)
+	runner.Register(usecase.JobSendDigest, sendDigest)
 	background.Go(func() { runner.Run(ctx) })
 
 	sched := scheduler.New(log)
@@ -109,6 +139,10 @@ func serve(ctx context.Context) error {
 		return err
 	})
 	if err != nil {
+		return err
+	}
+	// The digest time is per user setting, so it is checked every minute (docs/08 §2.1).
+	if err := sched.Add(ctx, "digest", "* * * * *", scheduleDigest.Execute); err != nil {
 		return err
 	}
 	background.Go(func() { sched.Run(ctx) })

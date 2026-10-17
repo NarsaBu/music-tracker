@@ -29,25 +29,6 @@
   color: var(--text-danger);
 }
 
-/* record shelf: wooden plank with records standing on it */
-.shelf {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: var(--space-6) var(--space-4);
-  padding: var(--space-6) var(--space-4);
-  margin: 0;
-  list-style: none;
-  background: var(--texture-wood), var(--surface-wood);
-  border-radius: var(--radius-panel);
-  box-shadow:
-    inset 0 4px 12px rgb(0 0 0 / 60%),
-    var(--shadow-object);
-}
-
-.shelf > li {
-  min-width: 0;
-}
-
 .note,
 .back {
   padding: 0 var(--space-2);
@@ -57,10 +38,4 @@
 .note a,
 .back a {
   color: inherit;
-}
-
-@media (width < 768px) {
-  .shelf {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }

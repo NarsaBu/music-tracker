@@ -25,6 +25,14 @@ export interface Settings {
   rss: { enabled: boolean; feedUrl: string };
 }
 
+/** Settings as loaded from the server, with the read-only digest schedule. */
+export interface SettingsState {
+  settings: Settings;
+  lastDigestAt: string | null;
+  /** null while email is off. */
+  nextDigestAt: string | null;
+}
+
 /** Mirrors the database defaults (backend/migrations/000001_init.up.sql). */
 export const DEFAULT_SETTINGS: Settings = {
   filters: {

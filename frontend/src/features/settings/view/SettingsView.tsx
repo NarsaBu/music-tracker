@@ -139,27 +139,71 @@ export function SettingsView(vm: SettingsViewModel) {
               ))}
             </datalist>
           </div>
+          <div className={styles.digestStatus}>
+            <LcdDisplay label="Расписание дайджеста" size="sm">
+              {vm.nextDigestText}
+            </LcdDisplay>
+            {vm.lastDigestText && <span className={styles.note}>{vm.lastDigestText}</span>}
+            <PushButton
+              onClick={vm.onSendTestEmail}
+              disabled={!vm.canTestEmail}
+              led={vm.testingEmail}
+              title={vm.canTestEmail ? undefined : 'Сначала сохраните адрес'}
+            >
+              Тестовое письмо
+            </PushButton>
+            {vm.testEmailText && (
+              <span
+                className={vm.testEmailFailed ? styles.error : styles.note}
+                role={vm.testEmailFailed ? 'alert' : 'status'}
+              >
+                {vm.testEmailText}
+              </span>
+            )}
+          </div>
         </div>
       </Panel>
 
       <Panel title="RSS / Atom" className={styles.rss}>
         <div className={styles.stack}>
           <ToggleSwitch label="Лента" checked={s.rss.enabled} onChange={vm.onRssEnabledChange} />
+          <p className={styles.note}>
+            Ссылка — личная: по ней лента доступна без входа. RSS 2.0 — та же ссылка с окончанием
+            .rss вместо .atom.
+          </p>
           <LcdDisplay label="Адрес ленты" size="sm" className={styles.feedUrl}>
             {s.rss.feedUrl || 'NO SIGNAL'}
           </LcdDisplay>
-          <PushButton disabled>Перевыпустить ссылку</PushButton>
+          <PushButton onClick={vm.onRotateFeedToken} disabled={vm.rotating} led={vm.rotating}>
+            Перевыпустить ссылку
+          </PushButton>
+          {vm.rotateError && (
+            <span className={styles.error} role="alert">
+              {vm.rotateError}
+            </span>
+          )}
         </div>
       </Panel>
 
       <div className={styles.actions}>
-        <span className={styles.note}>
-          Эталонная страница: изменения пока не сохраняются на сервере.
-        </span>
-        <PushButton onClick={vm.onReset} disabled={!vm.isDirty}>
+        {vm.saveError ? (
+          <span className={styles.error} role="alert">
+            {vm.saveError}
+          </span>
+        ) : (
+          <span className={styles.note}>
+            {vm.isDirty ? 'Есть несохранённые изменения' : 'Сохранено'}
+          </span>
+        )}
+        <PushButton onClick={vm.onReset} disabled={!vm.isDirty || vm.saving}>
           Сбросить
         </PushButton>
-        <PushButton type="submit" variant="primary" led={vm.isDirty} disabled={!vm.canSave}>
+        <PushButton
+          type="submit"
+          variant="primary"
+          led={vm.isDirty || vm.saving}
+          disabled={!vm.canSave}
+        >
           Сохранить
         </PushButton>
       </div>

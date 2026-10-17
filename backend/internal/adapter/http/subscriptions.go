@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"time"
@@ -35,6 +36,9 @@ type (
 	ReleaseGroupLister interface {
 		Execute(ctx context.Context, mbid, role string) ([]domain.ArtistReleaseGroup, error)
 	}
+	SubscriptionUpdater interface {
+		Execute(ctx context.Context, in artist.UpdateSubscriptionInput) (artist.SubscriptionView, error)
+	}
 )
 
 // ArtistUseCases groups the catalog search, subscription and artist catalog operations.
@@ -46,6 +50,7 @@ type ArtistUseCases struct {
 	Get           SubscriptionGetter
 	Sync          SubscriptionSyncer
 	ReleaseGroups ReleaseGroupLister
+	Update        SubscriptionUpdater
 }
 
 type artistHandler struct {
@@ -145,4 +150,49 @@ func (h *artistHandler) releaseGroups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, itemsDTO[releaseGroupDTO]{Items: mapSlice(items, toReleaseGroupDTO(time.Now().UTC()))})
+}
+
+// optional distinguishes an absent JSON field (set = false) from null (set, nil value).
+type optional[T any] struct {
+	set   bool
+	value *T
+}
+
+func (o *optional[T]) UnmarshalJSON(b []byte) error {
+	o.set = true
+	if string(b) == "null" {
+		return nil
+	}
+	var v T
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	o.value = &v
+	return nil
+}
+
+type patchSubscriptionRequest struct {
+	PrimaryTypes           optional[[]domain.PrimaryType] `json:"primary_types"`
+	ExcludedSecondaryTypes optional[[]string]             `json:"excluded_secondary_types"`
+	IncludeFeatured        optional[bool]                 `json:"include_featured"`
+}
+
+// PATCH /subscriptions/{mbid}: absent = unchanged, null = back to the global setting.
+func (h *artistHandler) update(w http.ResponseWriter, r *http.Request) {
+	var req patchSubscriptionRequest
+	if err := decodeJSON(w, r, &req); err != nil {
+		respondError(h.log, w, r, err)
+		return
+	}
+	v, err := h.uc.Update.Execute(r.Context(), artist.UpdateSubscriptionInput{
+		MBID:                   chi.URLParam(r, "mbid"),
+		PrimaryTypes:           artist.Patch[[]domain.PrimaryType]{Set: req.PrimaryTypes.set, Value: req.PrimaryTypes.value},
+		ExcludedSecondaryTypes: artist.Patch[[]string]{Set: req.ExcludedSecondaryTypes.set, Value: req.ExcludedSecondaryTypes.value},
+		IncludeFeatured:        artist.Patch[bool]{Set: req.IncludeFeatured.set, Value: req.IncludeFeatured.value},
+	})
+	if err != nil {
+		respondError(h.log, w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toSubscriptionDTO(v))
 }

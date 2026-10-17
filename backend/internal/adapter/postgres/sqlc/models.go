@@ -420,6 +420,20 @@ type Job struct {
 	CreatedAt   time.Time
 }
 
+type Notification struct {
+	ID               uuid.UUID
+	ReleaseGroupMbid uuid.UUID
+	ArtistMbid       uuid.UUID
+	CreditRole       CreditRole
+	Channel          NotificationChannel
+	Status           NotificationStatus
+	Attempts         int32
+	NextAttemptAt    time.Time
+	LastError        pgtype.Text
+	CreatedAt        time.Time
+	SentAt           *time.Time
+}
+
 type ReleaseGroup struct {
 	Mbid             uuid.UUID
 	Title            string

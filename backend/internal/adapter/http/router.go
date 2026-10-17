@@ -15,6 +15,11 @@ type Deps struct {
 	Readiness Pinger
 	Artists   ArtistUseCases
 	Sync      SyncUseCases
+	Settings  SettingsUseCases
+	Releases  ReleasesLister
+	Feeds     FeedBuilder
+	// AppURL is the public address of the app, linked from feeds.
+	AppURL string
 }
 
 func NewRouter(d Deps) http.Handler {
@@ -30,6 +35,10 @@ func NewRouter(d Deps) http.Handler {
 
 	artists := &artistHandler{uc: d.Artists, log: d.Logger}
 	sync := &syncHandler{uc: d.Sync, log: d.Logger}
+	settings := &settingsHandler{uc: d.Settings, log: d.Logger}
+	releases := &releasesHandler{list: d.Releases, feeds: d.Feeds, appURL: d.AppURL, log: d.Logger}
+
+	r.Get("/feeds/{file}", releases.serveFeed)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/catalog/artists", artists.search)
@@ -37,12 +46,19 @@ func NewRouter(d Deps) http.Handler {
 			r.Get("/", artists.list)
 			r.Post("/", artists.subscribe)
 			r.Get("/{mbid}", artists.get)
+			r.Patch("/{mbid}", artists.update)
 			r.Delete("/{mbid}", artists.unsubscribe)
 			r.Post("/{mbid}/sync", artists.sync)
 		})
 		r.Get("/artists/{mbid}/release-groups", artists.releaseGroups)
 		r.Post("/sync", sync.start)
 		r.Get("/sync/runs/latest", sync.latest)
+		r.Get("/releases", releases.listReleases)
+		r.Get("/settings", settings.get)
+		r.Put("/settings", settings.put)
+		r.Post("/settings/email/test", settings.testEmail)
+		r.Post("/settings/feed-token/rotate", settings.rotate)
+		r.Get("/meta/release-types", releaseTypes)
 
 		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 			writeProblem(w, r, http.StatusNotFound, "Not found", "")

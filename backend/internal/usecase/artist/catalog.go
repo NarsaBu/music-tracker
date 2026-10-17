@@ -64,3 +64,68 @@ func (uc *ListReleaseGroups) Execute(ctx context.Context, rawMBID, role string) 
 	}
 	return items, nil
 }
+
+// Patch is one optional field of a PATCH request: Set false = leave as is,
+// Set with a nil Value = reset to the global setting.
+type Patch[T any] struct {
+	Set   bool
+	Value *T
+}
+
+type UpdateSubscriptionInput struct {
+	MBID                   string
+	PrimaryTypes           Patch[[]domain.PrimaryType]
+	ExcludedSecondaryTypes Patch[[]string]
+	IncludeFeatured        Patch[bool]
+}
+
+// UpdateSubscription changes the filter override of a subscription (US-5, US-6).
+type UpdateSubscription struct {
+	subs     usecase.SubscriptionRepository
+	defaults usecase.FilterDefaultsReader
+}
+
+func NewUpdateSubscription(subs usecase.SubscriptionRepository, defaults usecase.FilterDefaultsReader) *UpdateSubscription {
+	return &UpdateSubscription{subs: subs, defaults: defaults}
+}
+
+func (uc *UpdateSubscription) Execute(ctx context.Context, in UpdateSubscriptionInput) (SubscriptionView, error) {
+	mbid, err := domain.ParseMBID(in.MBID)
+	if err != nil {
+		return SubscriptionView{}, err
+	}
+	sub, err := uc.subs.Get(ctx, mbid)
+	if err != nil {
+		return SubscriptionView{}, fmt.Errorf("update subscription %s: %w", mbid, err)
+	}
+	o := sub.Override
+	if in.PrimaryTypes.Set {
+		o.PrimaryTypes = derefSlice(in.PrimaryTypes.Value)
+	}
+	if in.ExcludedSecondaryTypes.Set {
+		o.ExcludedSecondaryTypes = derefSlice(in.ExcludedSecondaryTypes.Value)
+	}
+	if in.IncludeFeatured.Set {
+		o.IncludeFeatured = in.IncludeFeatured.Value
+	}
+	if err := o.Validate(); err != nil {
+		return SubscriptionView{}, err
+	}
+	if err := uc.subs.UpdateOverride(ctx, mbid, o); err != nil {
+		return SubscriptionView{}, fmt.Errorf("update subscription %s: %w", mbid, err)
+	}
+	sub.Override = o
+	defaults, err := uc.defaults.FilterDefaults(ctx)
+	if err != nil {
+		return SubscriptionView{}, fmt.Errorf("read filter defaults: %w", err)
+	}
+	return newView(sub, defaults), nil
+}
+
+// derefSlice keeps "set to empty" distinct from "reset": nil pointer → nil, empty → empty.
+func derefSlice[T any](p *[]T) []T {
+	if p == nil {
+		return nil
+	}
+	return append([]T{}, *p...)
+}

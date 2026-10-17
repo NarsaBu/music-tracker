@@ -1,9 +1,11 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
   LcdDisplay,
   Led,
   Panel,
   PushButton,
+  RecordShelf,
   RecordSleeve,
   RotarySelector,
   TapeLabel,
@@ -14,7 +16,12 @@ import {
 } from '../controller/useArtistCatalogController';
 import styles from './ArtistCatalogView.module.css';
 
-export function ArtistCatalogView(vm: ArtistCatalogViewModel) {
+export interface ArtistCatalogViewProps extends ArtistCatalogViewModel {
+  /** Slot under the header, e.g. the subscription filter editor. */
+  filterPanel?: ReactNode;
+}
+
+export function ArtistCatalogView({ filterPanel, ...vm }: ArtistCatalogViewProps) {
   if (vm.notSubscribed) {
     return (
       <Panel title="Исполнитель">
@@ -67,6 +74,8 @@ export function ArtistCatalogView(vm: ArtistCatalogViewModel) {
         </div>
       </Panel>
 
+      {filterPanel}
+
       {!vm.recordsLoading && vm.records.length === 0 && (
         <p className={styles.note}>
           {vm.synced
@@ -76,30 +85,29 @@ export function ArtistCatalogView(vm: ArtistCatalogViewModel) {
       )}
 
       {vm.records.length > 0 && (
-        <ul className={styles.shelf} aria-label="Каталог релизов">
+        <RecordShelf label="Каталог релизов">
           {vm.records.map((r) => (
-            <li key={r.mbid}>
-              <RecordSleeve
-                title={r.title}
-                subtitle={r.credit}
-                coverUrl={r.coverUrl}
-                href={r.musicbrainzUrl}
-                meta={r.date}
-                badges={
-                  <>
-                    {r.typeLabel && <TapeLabel>{r.typeLabel}</TapeLabel>}
-                    {r.secondaryTypes.map((t) => (
-                      <TapeLabel key={t}>{t}</TapeLabel>
-                    ))}
-                    {r.featured && <TapeLabel>feat.</TapeLabel>}
-                    {r.announcement && <TapeLabel tone="accent">Анонс</TapeLabel>}
-                    {r.fresh && <TapeLabel tone="accent">Новое</TapeLabel>}
-                  </>
-                }
-              />
-            </li>
+            <RecordSleeve
+              key={r.mbid}
+              title={r.title}
+              subtitle={r.credit}
+              coverUrl={r.coverUrl}
+              href={r.musicbrainzUrl}
+              meta={r.date}
+              badges={
+                <>
+                  {r.typeLabel && <TapeLabel>{r.typeLabel}</TapeLabel>}
+                  {r.secondaryTypes.map((t) => (
+                    <TapeLabel key={t}>{t}</TapeLabel>
+                  ))}
+                  {r.featured && <TapeLabel>feat.</TapeLabel>}
+                  {r.announcement && <TapeLabel tone="accent">Анонс</TapeLabel>}
+                  {r.fresh && <TapeLabel tone="accent">Новое</TapeLabel>}
+                </>
+              }
+            />
           ))}
-        </ul>
+        </RecordShelf>
       )}
 
       <p className={styles.back}>

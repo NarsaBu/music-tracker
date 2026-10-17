@@ -81,3 +81,14 @@ type ArtistReleaseGroup struct {
 	IsBaseline   bool
 	DiscoveredAt time.Time
 }
+
+// MusicBrainzURL is the release group page on musicbrainz.org.
+func (rg ReleaseGroup) MusicBrainzURL() string {
+	return "https://musicbrainz.org/release-group/" + string(rg.MBID)
+}
+
+// CoverURL is the 250px front cover in the Cover Art Archive; it redirects to the
+// image or answers 404 when there is none. The backend never downloads it.
+func (rg ReleaseGroup) CoverURL() string {
+	return "https://coverartarchive.org/release-group/" + string(rg.MBID) + "/front-250"
+}

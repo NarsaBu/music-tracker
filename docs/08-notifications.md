@@ -10,9 +10,14 @@ FanOutNotifications(sub, rg, role):
   filter := domain.EffectiveFilter(settings, sub)    // override подписки поверх глобальных
   if !filter.Matches(rg, role):                      return
   if rg.IsAnnouncement(now) && !settings.notify_announcements: return
-  for ch in enabledChannels(settings):               // email (если задан email_to), rss
-      notifications.Insert(rg, sub.artist, role, ch) // ON CONFLICT (release_group_mbid, channel) DO NOTHING
+  notifications.Insert(rg, sub.artist, role, rss)    // всегда: это и RSS, и лента в UI
+  if settings.email_enabled && email_to != "":
+      notifications.Insert(rg, sub.artist, role, email)
+  // ON CONFLICT (release_group_mbid, channel): found_via меняется только на роль main
 ```
+
+- Fan-out получает только свежие находки: не baseline и не устаревшие (FR-3.4). Baseline — первая синхронизация исполнителя **или первая после повторной подписки** (`subscriptions.baseline_at > artists.last_synced_at`): релизы, вышедшие, пока подписки не было, не уведомляются.
+- `sync_runs.new_releases` — число релиз-групп, прошедших фильтры.
 
 `ReleaseFilter.Matches(rg, role)` (domain):
 - `role == featured` → только если `include_featured`;
@@ -57,7 +62,8 @@ FOR UPDATE SKIP LOCKED;
 ```
 - Пусто → письмо не отправляется, `next_digest_at` сдвигается (FR-5.4).
 - Иначе одно письмо, в той же транзакции все строки → `sent`, `settings.last_digest_at = now()`.
-- Ошибка SMTP → `attempts++`, `next_attempt_at = now() + 1m·2^attempts`, после 8 попыток → `failed` (видно в UI).
+- Ошибка SMTP → транзакция откатывается, у уведомлений `attempts++`, задача `send_digest` уходит в повтор с backoff очереди (30 с → 1 м → 2 м → 4 м, 5 попыток). Если все попытки исчерпаны, `next_digest_at` сдвигается на следующий слот, а уведомления остаются `pending` и уйдут со следующим дайджестом. После 8 неудачных попыток уведомление → `failed`. `next_attempt_at` не используется: иначе повтор задачи увидел бы «пустой» дайджест и сдвинул расписание.
+- SMTP: implicit TLS на порту 465, иначе STARTTLS, если сервер его предлагает; AUTH PLAIN — только при заданном `SMTP_USER`. Без `SMTP_HOST` отправка невозможна, тестовое письмо отвечает `503`.
 - Шаблоны `html/template` + `text/template` (multipart/alternative). Разделы: «Вышло», «Анонсы», «Гостевое участие» (featured); внутри — группировка по исполнителю, сортировка по дате.
 - Тема: `Новые релизы: Radiohead, Björk и ещё 3` (weekly: `за неделю`).
 - Окно «at-least-once»: падение процесса между отправкой SMTP и коммитом даст повторное письмо — допустимо.
@@ -65,6 +71,7 @@ FOR UPDATE SKIP LOCKED;
 ### 2.2 RSS / Atom
 
 - Отдельной доставки нет: уведомление `channel='rss'` создаётся сразу со статусом `sent`; лента обновляется сразу после синка.
+- Записи `rss` создаются **всегда**, даже при выключенном RSS: они же — лента в UI (`GET /api/v1/releases`, US-9). `rss_enabled` управляет только доступностью `/feeds/*`; при выключенном фиде (как и при неверном токене) — `404`.
 - `GET /feeds/{token}.atom|.rss` → `BuildFeed(token)` → последние 100 записей.
 - Элемент фида:
   - `id`/`guid`: `urn:musicbrainz:release-group:<mbid>` (стабилен — ридер не покажет дубль);

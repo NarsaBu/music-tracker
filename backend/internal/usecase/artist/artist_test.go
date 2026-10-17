@@ -229,3 +229,39 @@ func TestListReleaseGroups(t *testing.T) {
 }
 
 var _ usecase.MusicCatalog = (*fakeCatalog)(nil)
+
+func TestUpdateSubscription_PatchSemantics(t *testing.T) {
+	store := memory.NewStore()
+	on := true
+	store.Artists[nirvana] = domain.Artist{MBID: nirvana}
+	store.Subs[nirvana] = domain.Subscription{Override: domain.FilterOverride{
+		PrimaryTypes: []domain.PrimaryType{domain.PrimaryAlbum}, IncludeFeatured: &on,
+	}}
+	uc := NewUpdateSubscription(store.SubscriptionRepo(), store)
+
+	empty := []string{}
+	v, err := uc.Execute(context.Background(), UpdateSubscriptionInput{
+		MBID:                   string(nirvana),
+		PrimaryTypes:           Patch[[]domain.PrimaryType]{Set: true}, // null → reset
+		ExcludedSecondaryTypes: Patch[[]string]{Set: true, Value: &empty},
+		// IncludeFeatured absent → unchanged
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	o := store.Subs[nirvana].Override
+	if o.PrimaryTypes != nil || o.ExcludedSecondaryTypes == nil || len(o.ExcludedSecondaryTypes) != 0 || o.IncludeFeatured == nil || !*o.IncludeFeatured {
+		t.Errorf("override = %+v", o)
+	}
+	if v.Filter.PrimaryTypes.Overridden || !v.Filter.ExcludedSecondaryTypes.Overridden {
+		t.Errorf("filter = %+v", v.Filter)
+	}
+
+	bad := []domain.PrimaryType{"lp"}
+	if _, err := uc.Execute(context.Background(), UpdateSubscriptionInput{MBID: string(nirvana), PrimaryTypes: Patch[[]domain.PrimaryType]{Set: true, Value: &bad}}); !errors.Is(err, domain.ErrValidation) {
+		t.Errorf("bad type: %v", err)
+	}
+	if _, err := uc.Execute(context.Background(), UpdateSubscriptionInput{MBID: string(radiohead)}); !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("not subscribed: %v", err)
+	}
+}

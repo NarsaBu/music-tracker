@@ -41,6 +41,13 @@ export interface SubscribeRequest {
   excludedSecondaryTypes?: SecondaryType[];
 }
 
+/** PATCH body: an absent field is unchanged, null resets it to the global setting. */
+export interface FilterPatch {
+  primaryTypes?: PrimaryType[] | null;
+  excludedSecondaryTypes?: SecondaryType[] | null;
+  includeFeatured?: boolean | null;
+}
+
 export type SyncState = 'pending' | 'synced';
 
 export function syncStateOf(s: Pick<Subscription, 'lastSyncedAt'>): SyncState {

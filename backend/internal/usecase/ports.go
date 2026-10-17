@@ -72,6 +72,8 @@ type SubscriptionRepository interface {
 	// Delete returns domain.ErrNotFound when the artist is not subscribed.
 	Delete(ctx context.Context, artist domain.MBID) error
 	List(ctx context.Context, q SubscriptionListQuery) (items []domain.Subscription, total int, err error)
+	// UpdateOverride replaces the filter override; domain.ErrNotFound when not subscribed.
+	UpdateOverride(ctx context.Context, artist domain.MBID, o domain.FilterOverride) error
 	// SubscribedAmong returns the subset of artists that have a subscription.
 	SubscribedAmong(ctx context.Context, artists []domain.MBID) (map[domain.MBID]bool, error)
 }
@@ -79,6 +81,47 @@ type SubscriptionRepository interface {
 // FilterDefaultsReader reads the global release filter from settings.
 type FilterDefaultsReader interface {
 	FilterDefaults(ctx context.Context) (domain.ReleaseFilter, error)
+}
+
+type SettingsRepository interface {
+	FilterDefaultsReader
+	Get(ctx context.Context) (domain.Settings, error)
+	// Save stores the user-editable fields and NextDigestAt.
+	Save(ctx context.Context, s domain.Settings) error
+	SetFeedToken(ctx context.Context, token string) error
+	// SetDigestTimes moves the schedule; a nil last keeps the previous value.
+	SetDigestTimes(ctx context.Context, last, next *time.Time) error
+}
+
+// FeedQuery selects a page of the release feed, newest first.
+type FeedQuery struct {
+	Before *FeedCursor
+	Type   domain.PrimaryType // "" = any
+	Role   domain.CreditRole  // "" = any
+	Limit  int
+}
+
+// FeedCursor is the position after the last item of a page.
+type FeedCursor struct {
+	CreatedAt time.Time
+	ID        string
+}
+
+type NotificationRepository interface {
+	// Insert ignores a duplicate release group in the same channel (FR-5.8).
+	Insert(ctx context.Context, n domain.Notification) error
+	// ClaimPendingEmail locks pending email notifications for the current transaction.
+	ClaimPendingEmail(ctx context.Context) ([]domain.NotificationItem, error)
+	MarkSent(ctx context.Context, ids []string, at time.Time) error
+	// MarkFailed counts a failed attempt; after domain.MaxEmailAttempts the items are failed.
+	MarkFailed(ctx context.Context, ids []string, cause error) error
+	ListFeed(ctx context.Context, q FeedQuery) ([]domain.NotificationItem, error)
+}
+
+// DigestMailer delivers email (docs/08-notifications.md §2.1).
+type DigestMailer interface {
+	SendDigest(ctx context.Context, to string, d domain.Digest) error
+	SendTest(ctx context.Context, to string) error
 }
 
 // TxManager runs fn inside a single database transaction. Repositories pick the

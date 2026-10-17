@@ -4,6 +4,7 @@ export { LcdDisplay, type LcdDisplayProps } from './LcdDisplay/LcdDisplay';
 export { Led, type LedProps, type LedState } from './Led/Led';
 export { Panel, type PanelProps } from './Panel/Panel';
 export { PushButton, type PushButtonProps } from './PushButton/PushButton';
+export { RecordShelf, type RecordShelfProps } from './RecordShelf/RecordShelf';
 export { RecordSleeve, type RecordSleeveProps } from './RecordSleeve/RecordSleeve';
 export {
   RotarySelector,

@@ -7,6 +7,9 @@ package sqlc
 
 import (
 	"context"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const getFilterDefaults = `-- name: GetFilterDefaults :one
@@ -51,4 +54,77 @@ func (q *Queries) GetSettings(ctx context.Context) (Setting, error) {
 		&i.FeedToken,
 	)
 	return i, err
+}
+
+const setDigestTimes = `-- name: SetDigestTimes :exec
+UPDATE settings SET last_digest_at = coalesce($1, last_digest_at), next_digest_at = $2 WHERE id = 1
+`
+
+type SetDigestTimesParams struct {
+	LastDigestAt *time.Time
+	NextDigestAt *time.Time
+}
+
+func (q *Queries) SetDigestTimes(ctx context.Context, arg SetDigestTimesParams) error {
+	_, err := q.db.Exec(ctx, setDigestTimes, arg.LastDigestAt, arg.NextDigestAt)
+	return err
+}
+
+const setFeedToken = `-- name: SetFeedToken :exec
+UPDATE settings SET feed_token = $1 WHERE id = 1
+`
+
+func (q *Queries) SetFeedToken(ctx context.Context, feedToken string) error {
+	_, err := q.db.Exec(ctx, setFeedToken, feedToken)
+	return err
+}
+
+const updateSettings = `-- name: UpdateSettings :exec
+UPDATE settings
+SET primary_types            = $1,
+    excluded_secondary_types = $2,
+    include_featured         = $3,
+    notify_announcements     = $4,
+    email_enabled            = $5,
+    email_to                 = $6,
+    digest_frequency         = $7,
+    digest_weekday           = $8,
+    digest_time              = $9,
+    timezone                 = $10,
+    next_digest_at           = $11,
+    rss_enabled              = $12
+WHERE id = 1
+`
+
+type UpdateSettingsParams struct {
+	PrimaryTypes           []ReleasePrimaryType
+	ExcludedSecondaryTypes []string
+	IncludeFeatured        bool
+	NotifyAnnouncements    bool
+	EmailEnabled           bool
+	EmailTo                pgtype.Text
+	DigestFrequency        DigestFrequency
+	DigestWeekday          pgtype.Int2
+	DigestTime             pgtype.Time
+	Timezone               string
+	NextDigestAt           *time.Time
+	RssEnabled             bool
+}
+
+func (q *Queries) UpdateSettings(ctx context.Context, arg UpdateSettingsParams) error {
+	_, err := q.db.Exec(ctx, updateSettings,
+		arg.PrimaryTypes,
+		arg.ExcludedSecondaryTypes,
+		arg.IncludeFeatured,
+		arg.NotifyAnnouncements,
+		arg.EmailEnabled,
+		arg.EmailTo,
+		arg.DigestFrequency,
+		arg.DigestWeekday,
+		arg.DigestTime,
+		arg.Timezone,
+		arg.NextDigestAt,
+		arg.RssEnabled,
+	)
+	return err
 }

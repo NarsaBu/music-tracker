@@ -34,3 +34,8 @@ WHERE sqlc.narg(search)::text IS NULL
 
 -- name: SubscribedAmong :many
 SELECT artist_mbid FROM subscriptions WHERE artist_mbid = ANY (@mbids::uuid[]);
+
+-- name: UpdateSubscriptionOverride :execrows
+UPDATE subscriptions
+SET primary_types = $2, excluded_secondary_types = $3, include_featured = $4
+WHERE artist_mbid = $1;

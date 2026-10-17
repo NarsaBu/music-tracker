@@ -3,6 +3,7 @@ import { artistSchema } from '@/entities/artist/api';
 import { PRIMARY_TYPES } from '@/entities/release/model';
 import type { HttpClient } from '@/shared/api';
 import type {
+  FilterPatch,
   SubscribeRequest,
   Subscription,
   SubscriptionListParams,
@@ -52,6 +53,17 @@ export function createSubscriptionApi(http: HttpClient) {
           include_featured: req.includeFeatured,
           primary_types: req.primaryTypes,
           excluded_secondary_types: req.excludedSecondaryTypes,
+        },
+        subscriptionSchema,
+      ),
+    /** Changes overrides: a field set to null goes back to the global setting. */
+    updateFilter: (mbid: string, patch: FilterPatch): Promise<Subscription> =>
+      http.patch(
+        `/api/v1/subscriptions/${encodeURIComponent(mbid)}`,
+        {
+          primary_types: patch.primaryTypes,
+          excluded_secondary_types: patch.excludedSecondaryTypes,
+          include_featured: patch.includeFeatured,
         },
         subscriptionSchema,
       ),

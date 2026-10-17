@@ -1,0 +1,12 @@
+{{.Subject}}
+{{range .Sections}}
+== {{.Title}} ==
+{{range .Artists}}
+{{.Name}}
+{{range .Releases}}  * {{.Title}}{{if .Type}} ({{.Type}}){{end}}, {{.Date}}
+    {{.Credit}}
+    {{.URL}}
+{{end}}{{end}}{{end}}
+--
+Music Tracker{{if .AppURL}} · {{.AppURL}}{{end}}
+Всего релизов: {{.Total}}. Настройки рассылки — в разделе Settings.

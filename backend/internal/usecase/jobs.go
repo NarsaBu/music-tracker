@@ -1,6 +1,9 @@
 package usecase
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // Job is a unit of background work. Payload is marshaled to JSON by the queue.
 type Job struct {
@@ -28,6 +31,23 @@ func NewSyncArtistJob(artist, runID, scope string, at time.Time) Job {
 		Kind:     JobSyncArtist,
 		DedupKey: JobSyncArtist + ":" + scope + ":" + artist,
 		Payload:  SyncArtistPayload{ArtistMBID: artist, RunID: runID},
+		RunAt:    at,
+	}
+}
+
+// JobSendDigest sends the email digest that was due at Due.
+const JobSendDigest = "send_digest"
+
+type SendDigestPayload struct {
+	Due time.Time `json:"due"`
+}
+
+// NewSendDigestJob deduplicates by the due time: one digest per slot.
+func NewSendDigestJob(due, at time.Time) Job {
+	return Job{
+		Kind:     JobSendDigest,
+		DedupKey: fmt.Sprintf("%s:%d", JobSendDigest, due.Unix()),
+		Payload:  SendDigestPayload{Due: due},
 		RunAt:    at,
 	}
 }

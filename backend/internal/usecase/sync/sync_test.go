@@ -10,6 +10,7 @@ import (
 	"music-tracker/backend/internal/domain"
 	"music-tracker/backend/internal/usecase"
 	"music-tracker/backend/internal/usecase/memory"
+	"music-tracker/backend/internal/usecase/notify"
 )
 
 const (
@@ -40,19 +41,25 @@ func (f *fakeCatalog) ListReleaseGroups(_ context.Context, a domain.MBID) ([]dom
 }
 
 func rg(mbid domain.MBID, date string, credits ...domain.CreditName) domain.ReleaseGroup {
-	return domain.ReleaseGroup{MBID: mbid, Title: string(mbid), FirstRelease: domain.ParseReleaseDate(date), Credits: credits}
+	return domain.ReleaseGroup{
+		MBID: mbid, Title: string(mbid), PrimaryType: domain.PrimaryAlbum,
+		FirstRelease: domain.ParseReleaseDate(date), Credits: credits,
+	}
 }
 
 func solo(a domain.MBID) domain.CreditName { return domain.CreditName{ArtistMBID: a, Name: "A"} }
 
 func newSyncArtist(store *memory.Store, catalog *fakeCatalog) *Artist {
-	return NewArtist(catalog, store.ArtistRepo(), store.ReleaseRepo(), store.RunRepo(),
-		memory.TxManager{}, &memory.Clock{T: now}, Config{StaleThreshold: 90 * 24 * time.Hour})
+	clock := &memory.Clock{T: now}
+	fanout := notify.NewFanOut(store.SettingsRepo(), store.SubscriptionRepo(), store.NotificationRepo(), clock)
+	return NewArtist(catalog, store.ArtistRepo(), store.SubscriptionRepo(), store.ReleaseRepo(), store.RunRepo(),
+		fanout, memory.TxManager{}, clock, Config{StaleThreshold: 90 * 24 * time.Hour})
 }
 
 func TestSyncArtist_BaselineThenNews(t *testing.T) {
 	store := memory.NewStore()
 	store.Artists[artistA] = domain.Artist{MBID: artistA}
+	store.Subs[artistA] = domain.Subscription{BaselineAt: now.Add(-time.Hour)}
 	catalog := &fakeCatalog{groups: map[domain.MBID][]domain.ReleaseGroup{
 		artistA: {rg(rg1, "2001", solo(artistA))},
 	}}
@@ -93,6 +100,28 @@ func TestSyncArtist_BaselineThenNews(t *testing.T) {
 	}
 	if roles[rg3] != domain.RoleFeatured {
 		t.Errorf("role of rg3 = %s, want featured", roles[rg3])
+	}
+	if len(store.Notifs) != 1 || store.Notifs[0].ReleaseGroup != rg2 || store.Notifs[0].Channel != domain.ChannelRSS {
+		t.Errorf("notifications = %+v, want one rss entry for rg2", store.Notifs)
+	}
+}
+
+func TestSyncArtist_ResubscriptionIsBaseline(t *testing.T) {
+	store := memory.NewStore()
+	lastSync := now.Add(-30 * 24 * time.Hour)
+	store.Artists[artistA] = domain.Artist{MBID: artistA, LastSyncedAt: &lastSync}
+	// Unsubscribed for a while, subscribed again a minute ago.
+	store.Subs[artistA] = domain.Subscription{BaselineAt: now.Add(-time.Minute)}
+	catalog := &fakeCatalog{groups: map[domain.MBID][]domain.ReleaseGroup{
+		artistA: {rg(rg1, "2026-10-01", solo(artistA))},
+	}}
+
+	res, err := newSyncArtist(store, catalog).Execute(context.Background(), artistA, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Baseline || res.New != 0 || len(store.Notifs) != 0 {
+		t.Errorf("result = %+v, notifications = %d; a release from the unsubscribed period is history", res, len(store.Notifs))
 	}
 }
 

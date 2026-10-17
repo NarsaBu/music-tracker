@@ -1,0 +1,28 @@
+.layout {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.message {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  padding: 0 var(--space-2);
+  color: var(--text-on-plastic);
+}
+
+.message a {
+  color: inherit;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+}

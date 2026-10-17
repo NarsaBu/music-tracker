@@ -166,10 +166,9 @@ func toReleaseGroupDTO(now time.Time) func(domain.ArtistReleaseGroup) releaseGro
 			FirstReleaseDate: nullIfEmpty(rg.FirstRelease.Raw),
 			IsBaseline:       l.IsBaseline,
 			IsAnnouncement:   rg.FirstRelease.IsAnnouncement(now),
-			// Cover Art Archive redirects to the image; the backend never downloads it.
-			CoverURL:       "https://coverartarchive.org/release-group/" + string(rg.MBID) + "/front-250",
-			MusicBrainzURL: "https://musicbrainz.org/release-group/" + string(rg.MBID),
-			DiscoveredAt:   l.DiscoveredAt,
+			CoverURL:         rg.CoverURL(),
+			MusicBrainzURL:   rg.MusicBrainzURL(),
+			DiscoveredAt:     l.DiscoveredAt,
 		}
 	}
 }

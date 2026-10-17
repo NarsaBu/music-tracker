@@ -5,6 +5,7 @@ package memory
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 	"sync"
@@ -23,7 +24,15 @@ type Store struct {
 	Links    map[domain.MBID][]domain.ArtistReleaseGroup // by artist
 	Runs     []domain.SyncRun
 	Jobs     []usecase.Job
-	Defaults domain.ReleaseFilter
+	Settings domain.Settings
+	Notifs   []StoredNotification
+}
+
+// StoredNotification is a notification row as the outbox keeps it.
+type StoredNotification struct {
+	domain.Notification
+	ID       string
+	Attempts int
 }
 
 func NewStore() *Store {
@@ -32,9 +41,16 @@ func NewStore() *Store {
 		Subs:     map[domain.MBID]domain.Subscription{},
 		Releases: map[domain.MBID]domain.ReleaseGroup{},
 		Links:    map[domain.MBID][]domain.ArtistReleaseGroup{},
-		Defaults: domain.ReleaseFilter{
-			PrimaryTypes:           []domain.PrimaryType{domain.PrimaryAlbum, domain.PrimaryEP, domain.PrimarySingle},
-			ExcludedSecondaryTypes: []string{"Compilation"},
+		Settings: domain.Settings{
+			Filter: domain.ReleaseFilter{
+				PrimaryTypes:           []domain.PrimaryType{domain.PrimaryAlbum, domain.PrimaryEP, domain.PrimarySingle},
+				ExcludedSecondaryTypes: []string{"Compilation"},
+			},
+			NotifyAnnouncements: true,
+			Email: domain.EmailSettings{Digest: domain.DigestSchedule{
+				Frequency: domain.DigestDaily, Hour: 9, Timezone: "UTC",
+			}},
+			RSS: domain.RSSSettings{Enabled: true, FeedToken: "token"},
 		},
 	}
 }
@@ -44,10 +60,14 @@ func (s *Store) SubscriptionRepo() *SubscriptionRepo { return &SubscriptionRepo{
 func (s *Store) ReleaseRepo() *ReleaseRepo           { return &ReleaseRepo{s} }
 func (s *Store) RunRepo() *RunRepo                   { return &RunRepo{s} }
 func (s *Store) Queue() *Queue                       { return &Queue{s} }
+func (s *Store) SettingsRepo() *SettingsRepo         { return &SettingsRepo{s} }
+func (s *Store) NotificationRepo() *NotificationRepo { return &NotificationRepo{s} }
 
 // FilterDefaults implements usecase.FilterDefaultsReader.
 func (s *Store) FilterDefaults(context.Context) (domain.ReleaseFilter, error) {
-	return s.Defaults, nil
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.Settings.Filter, nil
 }
 
 // --- artists ---
@@ -144,6 +164,18 @@ func (r *SubscriptionRepo) List(_ context.Context, q usecase.SubscriptionListQue
 	})
 	page := all[min(q.Offset, len(all)):min(q.Offset+q.Limit, len(all))]
 	return page, len(all), nil
+}
+
+func (r *SubscriptionRepo) UpdateOverride(_ context.Context, mbid domain.MBID, o domain.FilterOverride) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	sub, ok := r.s.Subs[mbid]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	sub.Override = o
+	r.s.Subs[mbid] = sub
+	return nil
 }
 
 func (r *SubscriptionRepo) SubscribedAmong(_ context.Context, mbids []domain.MBID) (map[domain.MBID]bool, error) {
@@ -286,3 +318,140 @@ func (TxManager) WithinTx(ctx context.Context, fn func(context.Context) error) e
 type Clock struct{ T time.Time }
 
 func (c *Clock) Now() time.Time { return c.T }
+
+// --- settings ---
+
+type SettingsRepo struct{ s *Store }
+
+func (r *SettingsRepo) FilterDefaults(ctx context.Context) (domain.ReleaseFilter, error) {
+	return r.s.FilterDefaults(ctx)
+}
+
+func (r *SettingsRepo) Get(context.Context) (domain.Settings, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	return r.s.Settings, nil
+}
+
+func (r *SettingsRepo) Save(_ context.Context, st domain.Settings) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	st.RSS.FeedToken = r.s.Settings.RSS.FeedToken
+	st.LastDigestAt = r.s.Settings.LastDigestAt
+	r.s.Settings = st
+	return nil
+}
+
+func (r *SettingsRepo) SetFeedToken(_ context.Context, token string) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	r.s.Settings.RSS.FeedToken = token
+	return nil
+}
+
+func (r *SettingsRepo) SetDigestTimes(_ context.Context, last, next *time.Time) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if last != nil {
+		r.s.Settings.LastDigestAt = last
+	}
+	r.s.Settings.NextDigestAt = next
+	return nil
+}
+
+// --- notifications ---
+
+type NotificationRepo struct{ s *Store }
+
+func (r *NotificationRepo) Insert(_ context.Context, n domain.Notification) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for i, old := range r.s.Notifs {
+		if old.ReleaseGroup == n.ReleaseGroup && old.Channel == n.Channel {
+			if old.Role != domain.RoleMain && n.Role == domain.RoleMain {
+				r.s.Notifs[i].Artist, r.s.Notifs[i].Role = n.Artist, n.Role
+			}
+			return nil
+		}
+	}
+	id := fmt.Sprintf("00000000-0000-0000-0000-%012d", len(r.s.Notifs)+1)
+	r.s.Notifs = append(r.s.Notifs, StoredNotification{Notification: n, ID: id})
+	return nil
+}
+
+func (r *NotificationRepo) item(n StoredNotification) domain.NotificationItem {
+	return domain.NotificationItem{
+		ID: n.ID, ReleaseGroup: r.s.Releases[n.ReleaseGroup], FoundVia: r.s.Artists[n.Artist],
+		Role: n.Role, CreatedAt: n.At,
+	}
+}
+
+func (r *NotificationRepo) ClaimPendingEmail(context.Context) ([]domain.NotificationItem, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []domain.NotificationItem
+	for _, n := range r.s.Notifs {
+		if n.Channel == domain.ChannelEmail && n.Status == domain.StatusPending {
+			out = append(out, r.item(n))
+		}
+	}
+	return out, nil
+}
+
+func (r *NotificationRepo) update(ids []string, f func(*StoredNotification)) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for i := range r.s.Notifs {
+		if slices.Contains(ids, r.s.Notifs[i].ID) {
+			f(&r.s.Notifs[i])
+		}
+	}
+}
+
+func (r *NotificationRepo) MarkSent(_ context.Context, ids []string, _ time.Time) error {
+	r.update(ids, func(n *StoredNotification) { n.Status = domain.StatusSent })
+	return nil
+}
+
+func (r *NotificationRepo) MarkFailed(_ context.Context, ids []string, _ error) error {
+	r.update(ids, func(n *StoredNotification) {
+		n.Attempts++
+		if n.Attempts >= domain.MaxEmailAttempts {
+			n.Status = domain.StatusFailed
+		}
+	})
+	return nil
+}
+
+func (r *NotificationRepo) ListFeed(_ context.Context, q usecase.FeedQuery) ([]domain.NotificationItem, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var rows []StoredNotification
+	for _, n := range r.s.Notifs {
+		if n.Channel != domain.ChannelRSS || (q.Role != "" && n.Role != q.Role) {
+			continue
+		}
+		if q.Type != "" && r.s.Releases[n.ReleaseGroup].PrimaryType != q.Type {
+			continue
+		}
+		rows = append(rows, n)
+	}
+	// Newest first; the id breaks ties like in PostgreSQL.
+	slices.SortFunc(rows, func(a, b StoredNotification) int {
+		if c := b.At.Compare(a.At); c != 0 {
+			return c
+		}
+		return strings.Compare(b.ID, a.ID)
+	})
+	var out []domain.NotificationItem
+	for _, n := range rows {
+		if q.Before != nil && (n.At.After(q.Before.CreatedAt) || n.At.Equal(q.Before.CreatedAt) && n.ID >= q.Before.ID) {
+			continue
+		}
+		if len(out) == q.Limit {
+			break
+		}
+		out = append(out, r.item(n))
+	}
+	return out, nil
+}
