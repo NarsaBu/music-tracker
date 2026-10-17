@@ -52,7 +52,6 @@ services:
     environment:
       # The password goes into a URL: keep it to [A-Za-z0-9] or percent-encode it.
       DATABASE_URL: postgres://${POSTGRES_USER:-tracker}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tracker}?sslmode=disable
-      HTTP_ADDR: :8080
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
 
       # MusicBrainz requires a User-Agent with contact info (email or URL).
