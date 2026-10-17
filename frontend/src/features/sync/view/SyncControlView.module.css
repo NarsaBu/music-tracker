@@ -1,15 +1,29 @@
 .deck {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* bar over the whole width, the artist counter at its right end */
+.meter {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-6);
-  align-items: center;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.bar {
+  flex: 1;
+}
+
+.counter {
+  flex: none;
 }
 
 .controls {
-  display: grid;
-  flex: 1 1 240px;
-  gap: var(--space-3);
-  justify-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  align-items: center;
+  justify-content: space-between;
 }
 
 .status {

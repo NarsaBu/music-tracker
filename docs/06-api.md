@@ -64,7 +64,7 @@ API открыт для всех, кто достучался до сервер�
 
 | Метод | Путь | Описание |
 |-------|------|----------|
-| GET | `/subscriptions?q=&limit=&offset=` | Список подписок |
+| GET | `/subscriptions?q=&status=&type=&country=&filter=&sort=&limit=&offset=` | Список подписок. Фильтры (пусто = любые): `status` — `synced` / `pending` (первая проверка прошла / ещё нет), `type` — тип исполнителя MusicBrainz, `country` — код страны, `filter` — `own` / `global` (есть ли своё правило). `sort` — `name` (по умолчанию) или `added` (новые подписки первыми). `facets` — страны и типы, которые есть в картотеке |
 | POST | `/subscriptions` | `{mbid, include_featured?, primary_types?, excluded_secondary_types?}` → 201 + подписка (повтор → 200, переопределения не меняются); отсутствующее/`null` поле = глобальная настройка, `[]` — явное переопределение |
 | GET | `/subscriptions/{mbid}` | Подписка (формат — как элемент списка); каталог — `GET /artists/{mbid}/release-groups` |
 | PATCH | `/subscriptions/{mbid}` | Переопределения `{primary_types?, excluded_secondary_types?, include_featured?}`: поле отсутствует — не меняется, `null` — сброс на глобальные, `[]` — явное «ничего». Ответ — подписка |
@@ -87,7 +87,8 @@ API открыт для всех, кто достучался до сервер�
       "created_at": "2026-09-01T10:00:00Z"
     }
   ],
-  "total": 42
+  "total": 42,
+  "facets": { "countries": ["GB", "US"], "types": ["Group", "Person"] }
 }
 ```
 

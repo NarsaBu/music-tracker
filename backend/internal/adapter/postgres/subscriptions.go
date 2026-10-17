@@ -75,16 +75,24 @@ func (r *SubscriptionRepository) Delete(ctx context.Context, artist domain.MBID)
 }
 
 func (r *SubscriptionRepository) List(ctx context.Context, q usecase.SubscriptionListQuery) ([]domain.Subscription, int, error) {
-	search := pgtype.Text{String: escapeLike(q.Search), Valid: q.Search != ""}
+	filter := sqlc.CountSubscriptionsParams{
+		Search:     pgtype.Text{String: escapeLike(q.Search), Valid: q.Search != ""},
+		Synced:     optionalBool(q.Synced),
+		ArtistType: pgtype.Text{String: q.ArtistType, Valid: q.ArtistType != ""},
+		Country:    pgtype.Text{String: q.Country, Valid: q.Country != ""},
+		Overridden: optionalBool(q.Overridden),
+	}
 	qs := queries(ctx, r.pool)
 
 	rows, err := qs.ListSubscriptions(ctx, sqlc.ListSubscriptionsParams{
-		Limit: int32(q.Limit), Offset: int32(q.Offset), Search: search, //nolint:gosec // bounded by the use case
+		Limit: int32(q.Limit), Offset: int32(q.Offset), //nolint:gosec // bounded by the use case
+		Search: filter.Search, Synced: filter.Synced, ArtistType: filter.ArtistType,
+		Country: filter.Country, Overridden: filter.Overridden, NewestFirst: q.NewestFirst,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("list subscriptions: %w", err)
 	}
-	total, err := qs.CountSubscriptions(ctx, search)
+	total, err := qs.CountSubscriptions(ctx, filter)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count subscriptions: %w", err)
 	}
@@ -94,6 +102,19 @@ func (r *SubscriptionRepository) List(ctx context.Context, q usecase.Subscriptio
 		out[i] = subscriptionFromRow(row.Subscription, row.Artist)
 	}
 	return out, int(total), nil
+}
+
+func (r *SubscriptionRepository) Facets(ctx context.Context) (usecase.SubscriptionFacets, error) {
+	qs := queries(ctx, r.pool)
+	countries, err := qs.SubscriptionCountries(ctx)
+	if err != nil {
+		return usecase.SubscriptionFacets{}, fmt.Errorf("subscription countries: %w", err)
+	}
+	types, err := qs.SubscriptionArtistTypes(ctx)
+	if err != nil {
+		return usecase.SubscriptionFacets{}, fmt.Errorf("subscription artist types: %w", err)
+	}
+	return usecase.SubscriptionFacets{Countries: countries, ArtistTypes: types}, nil
 }
 
 func (r *SubscriptionRepository) UpdateOverride(ctx context.Context, artist domain.MBID, o domain.FilterOverride) error {

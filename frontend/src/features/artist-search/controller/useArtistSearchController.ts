@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { formatLifeSpan } from '@/entities/artist/model';
+import { artistTypeLabel, formatLifeSpan } from '@/entities/artist/model';
 import { useArtistSearchQuery } from '@/entities/artist/queries';
 import { useSubscribeMutation } from '@/entities/subscription/queries';
 import { ApiError } from '@/shared/api';
+import { useI18n, type Messages } from '@/shared/i18n';
 import { useDebouncedValue } from '@/shared/lib/useDebouncedValue';
 
 export const SEARCH_DEBOUNCE_MS = 400;
@@ -20,15 +21,14 @@ export interface StationRow {
   subscribing: boolean;
 }
 
-function errorText(error: unknown): string {
-  if (error instanceof ApiError && error.status === 503) {
-    return 'MusicBrainz не отвечает, попробуйте через минуту';
-  }
-  return 'Не удалось выполнить запрос';
+function errorText(error: unknown, t: Messages): string {
+  if (error instanceof ApiError && error.status === 503) return t.common.musicbrainzDown;
+  return t.search.requestFailed;
 }
 
 /** Artist search screen ("tuner", US-1): debounced search and one-click subscribe. */
 export function useArtistSearchController() {
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [includeFeatured, setIncludeFeatured] = useState(false);
   const debounced = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
@@ -52,7 +52,7 @@ export function useArtistSearchController() {
     ? (search.data ?? []).map((a) => ({
         mbid: a.mbid,
         name: a.name,
-        details: [a.disambiguation, a.type].filter(Boolean).join(' · '),
+        details: [a.disambiguation, artistTypeLabel(a.type, t.common)].filter(Boolean).join(' · '),
         country: a.country,
         years: formatLifeSpan(a.lifeSpan),
         score: a.score,
@@ -62,11 +62,11 @@ export function useArtistSearchController() {
     : [];
 
   const lcdText = {
-    idle: 'NO SIGNAL',
-    tuning: 'TUNING…',
-    error: 'ERROR',
-    empty: '0 STATIONS',
-    results: `${stations.length} STATIONS`,
+    idle: t.common.lcd.noSignal,
+    tuning: t.common.lcd.tuning,
+    error: t.common.lcd.error,
+    empty: t.search.stations(0),
+    results: t.search.stations(stations.length),
   }[status];
 
   return {
@@ -76,9 +76,9 @@ export function useArtistSearchController() {
     stations,
     includeFeatured,
     errorText: search.isError
-      ? errorText(search.error)
+      ? errorText(search.error, t)
       : subscribe.isError
-        ? errorText(subscribe.error)
+        ? errorText(subscribe.error, t)
         : undefined,
 
     onQueryChange: setQuery,

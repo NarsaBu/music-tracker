@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { useI18n } from '@/shared/i18n';
 import {
   EngravedInput,
   LcdDisplay,
@@ -14,12 +15,14 @@ import styles from './ArtistSearchView.module.css';
 const SCALE_MARKS = ['88', '92', '96', '100', '104', '108'];
 
 export function ArtistSearchView(vm: ArtistSearchViewModel) {
+  const { t: all } = useI18n();
+  const t = all.search;
   return (
     <div className={styles.layout}>
       <Panel
-        title="Тюнер · поиск исполнителя"
+        title={t.title}
         extra={
-          <LcdDisplay label="Состояние поиска" size="sm">
+          <LcdDisplay label={t.state} size="sm">
             {vm.lcdText}
           </LcdDisplay>
         }
@@ -32,20 +35,20 @@ export function ArtistSearchView(vm: ArtistSearchViewModel) {
               ))}
             </div>
             <EngravedInput
-              label="Исполнитель"
+              label={t.artist}
               type="search"
               autoComplete="off"
               spellCheck={false}
               placeholder="Radiohead, Björk, AC/DC…"
               value={vm.query}
               onChange={(e) => vm.onQueryChange(e.target.value)}
-              hint="Имя или часть имени; поиск по MusicBrainz"
+              hint={t.hint}
             />
           </div>
           <ToggleSwitch
             className={styles.featuring}
-            label="Featuring"
-            description="Сообщать и о релизах, где исполнитель — гость. Выключено — как в общих настройках."
+            label={all.common.featuring}
+            description={all.common.featuringHint}
             checked={vm.includeFeatured}
             onChange={vm.onIncludeFeaturedChange}
           />
@@ -56,25 +59,17 @@ export function ArtistSearchView(vm: ArtistSearchViewModel) {
         <p className={styles.error} role="alert">
           <Led state="warn" />
           {vm.errorText}
-          {vm.status === 'error' && <PushButton onClick={vm.onRetry}>Повторить</PushButton>}
+          {vm.status === 'error' && <PushButton onClick={vm.onRetry}>{t.retry}</PushButton>}
         </p>
       )}
 
-      {vm.status === 'empty' && (
-        <p className={styles.note}>
-          Ничего не найдено. Проверьте написание или попробуйте другое имя.
-        </p>
-      )}
+      {vm.status === 'empty' && <p className={styles.note}>{t.empty}</p>}
 
       {vm.stations.length > 0 && (
-        <ul
-          className={styles.stations}
-          aria-label="Найденные исполнители"
-          aria-busy={vm.status === 'tuning'}
-        >
+        <ul className={styles.stations} aria-label={t.results} aria-busy={vm.status === 'tuning'}>
           {vm.stations.map((s) => (
             <li key={s.mbid} className={styles.station}>
-              <SignalMeter value={s.score} label="Совпадение" />
+              <SignalMeter value={s.score} label={all.common.match} />
               <div className={styles.info}>
                 <span className={styles.name}>{s.name}</span>
                 <span className={styles.details}>
@@ -84,7 +79,7 @@ export function ArtistSearchView(vm: ArtistSearchViewModel) {
               {s.subscribed ? (
                 <span className={styles.subscribed}>
                   <Led state="ok" />
-                  Подписка есть
+                  {t.subscribed}
                 </span>
               ) : (
                 <PushButton
@@ -92,9 +87,9 @@ export function ArtistSearchView(vm: ArtistSearchViewModel) {
                   led={s.subscribing}
                   disabled={s.subscribing}
                   onClick={() => vm.onSubscribe(s.mbid)}
-                  aria-label={`Подписаться на ${s.name}`}
+                  aria-label={t.subscribeTo(s.name)}
                 >
-                  Подписаться
+                  {t.subscribe}
                 </PushButton>
               )}
             </li>
@@ -103,7 +98,7 @@ export function ArtistSearchView(vm: ArtistSearchViewModel) {
       )}
 
       <p className={styles.back}>
-        <Link to="/artists">← К картотеке подписок</Link>
+        <Link to="/artists">{t.back}</Link>
       </p>
     </div>
   );

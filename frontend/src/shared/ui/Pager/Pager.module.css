@@ -1,0 +1,54 @@
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  align-items: center;
+  justify-content: center;
+}
+
+.keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  justify-content: center;
+}
+
+.page {
+  min-width: 40px;
+  font-family: var(--font-display);
+}
+
+.gap {
+  padding: 0 var(--space-1);
+  color: var(--text-on-plastic);
+}
+
+.jump {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.jumpInput {
+  width: 88px;
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  font-family: var(--font-display);
+  color: var(--text-display);
+  background: var(--surface-display);
+  border: 2px solid #050505;
+  border-radius: 3px;
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 80%);
+}
+
+.jumpInput::placeholder {
+  color: color-mix(in srgb, var(--text-display) 45%, transparent);
+}
+
+.jumpInput:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 2px 6px rgb(0 0 0 / 80%),
+    var(--focus-ring);
+}

@@ -1,14 +1,8 @@
+import type { Messages } from '@/shared/i18n';
+
 /** MusicBrainz release group primary types (lowercase, as stored by the backend). */
 export const PRIMARY_TYPES = ['album', 'single', 'ep', 'broadcast', 'other'] as const;
 export type PrimaryType = (typeof PRIMARY_TYPES)[number];
-
-export const PRIMARY_TYPE_LABELS: Record<PrimaryType, string> = {
-  album: 'Album',
-  single: 'Single',
-  ep: 'EP',
-  broadcast: 'Broadcast',
-  other: 'Other',
-};
 
 /** MusicBrainz secondary types, spelled exactly as in the MusicBrainz API. */
 export const SECONDARY_TYPES = [
@@ -29,12 +23,6 @@ export type SecondaryType = (typeof SECONDARY_TYPES)[number];
 
 export const CREDIT_ROLES = ['main', 'collaboration', 'featured'] as const;
 export type CreditRole = (typeof CREDIT_ROLES)[number];
-
-export const CREDIT_ROLE_LABELS: Record<CreditRole, string> = {
-  main: 'Основные',
-  collaboration: 'Совместные',
-  featured: 'Featuring',
-};
 
 /** A release group in an artist's catalog. */
 export interface ReleaseGroup {
@@ -57,13 +45,14 @@ export interface ReleaseGroup {
   discoveredAt: string;
 }
 
-const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-
-/** "2024", "мая 2024", "17 мая 2024", or "дата неизвестна". */
-export function formatPartialDate(date: string | null): string {
-  if (!date) return 'дата неизвестна';
+/** "2024", "мая 2024", "17 мая 2024", or "дата неизвестна" (in the UI language). */
+export function formatPartialDate(
+  date: string | null,
+  t: Pick<Messages['common'], 'months' | 'unknownDate'>,
+): string {
+  if (!date) return t.unknownDate;
   const [y, m, d] = date.split('-');
-  const month = m ? MONTHS[Number(m) - 1] : undefined;
+  const month = m ? t.months[Number(m) - 1] : undefined;
   if (!month) return y ?? date;
   return d ? `${Number(d)} ${month} ${y}` : `${month} ${y}`;
 }

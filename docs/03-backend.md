@@ -128,7 +128,7 @@ type SyncArtist struct {
 
 ## 5. Конфигурация (env)
 
-Локально переменные задаются в `.env` в корне репозитория (шаблон — `.env.example`, сам `.env` в git не попадает). Его читают `make run-backend` / `make migrate-*` и docker compose; в compose `DATABASE_URL`, `SMTP_HOST/PORT` и `PUBLIC_BASE_URL` переопределяются адресами внутри docker-сети.
+Локально переменные задаются в `.env` в корне репозитория (шаблон — `.env.example`, сам `.env` в git не попадает). Его читают `make run-backend` / `make migrate-*` и docker compose; в compose `DATABASE_URL` и `PUBLIC_BASE_URL` переопределяются адресами внутри docker-сети. Пустые `SMTP_HOST`/`SMTP_PORT` означают ловушку mailpit (`mailpit:1025` в compose, `localhost:1025` для `make run-backend`): письма видны в http://localhost:8025, но никуда не уходят. Для настоящей доставки укажите SMTP своего почтового провайдера.
 
 | Переменная | По умолчанию | Описание |
 |------------|--------------|----------|

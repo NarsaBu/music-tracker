@@ -4,11 +4,14 @@ import { releaseKeys } from '@/entities/release/queries';
 import { subscriptionKeys } from '@/entities/subscription/queries';
 import { isRunning, progressOf } from '@/entities/sync/model';
 import { useLatestSyncRunQuery, useStartSyncMutation } from '@/entities/sync/queries';
-import { formatDateTime } from '@/shared/lib/format';
+import { useI18n } from '@/shared/i18n';
+import { formatDateTime, LCD_BLANK, lcdCount, lcdPair } from '@/shared/lib/format';
 
-/** Whole-library sync ("Play" button + VU meter, US-10). */
+/** Whole-library sync ("Play" button + LED progress bar, US-10). */
 export function useSyncControlController() {
   const queryClient = useQueryClient();
+  const { t: all } = useI18n();
+  const t = all.sync;
   const latest = useLatestSyncRunQuery();
   const start = useStartSyncMutation();
   const run = latest.data ?? null;
@@ -24,19 +27,24 @@ export function useSyncControlController() {
     wasRunning.current = running;
   }, [running, queryClient]);
 
-  let lcdText = 'NO RUNS';
-  let statusText = 'Проверок ещё не было';
+  // A finished run stays on the bar as a full one, so the last result is visible.
+  const progress = run ? (running ? progressOf(run) : 100) : 0;
+  let lcdText = t.noRunsLcd;
+  let statusText = t.noRuns;
   if (run && running) {
-    lcdText = `${run.artistsDone}/${run.artistsTotal}`;
-    statusText = `Идёт проверка: ${run.artistsDone} из ${run.artistsTotal}`;
+    lcdText = `${String(progress).padStart(3, '0')}%`;
+    statusText = t.running(run.artistsDone, run.artistsTotal);
   } else if (run?.finishedAt) {
-    lcdText = `NEW ${String(run.newReleases).padStart(3, '0')}`;
-    statusText = `Последняя проверка: ${formatDateTime(run.finishedAt)} · новинок: ${run.newReleases}`;
+    lcdText = t.newLcd(lcdCount(run.newReleases));
+    statusText = t.finished(formatDateTime(run.finishedAt, all.locale), run.newReleases);
   }
 
   return {
     running,
-    progress: run && running ? progressOf(run) : 0,
+    progress,
+    /** Tape-counter style "120/712"; dashes before the first run. */
+    counterText: run ? lcdPair(run.artistsDone, run.artistsTotal) : `${LCD_BLANK}/${LCD_BLANK}`,
+    progressText: run ? t.counter(run.artistsDone, run.artistsTotal) : t.noRuns,
     lcdText,
     statusText,
     starting: start.isPending,

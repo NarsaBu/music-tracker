@@ -17,13 +17,33 @@ const countSubscriptions = `-- name: CountSubscriptions :one
 SELECT count(*)
 FROM subscriptions s
 JOIN artists a ON a.mbid = s.artist_mbid
-WHERE $1::text IS NULL
-   OR a.name ILIKE '%' || $1 || '%'
-   OR a.sort_name ILIKE '%' || $1 || '%'
+WHERE ($1::text IS NULL
+       OR a.name ILIKE '%' || $1 || '%'
+       OR a.sort_name ILIKE '%' || $1 || '%')
+  AND ($2::boolean IS NULL OR (a.last_synced_at IS NOT NULL) = $2)
+  AND ($3::text IS NULL OR a.type = $3)
+  AND ($4::text IS NULL OR a.country = $4)
+  AND ($5::boolean IS NULL
+       OR (s.primary_types IS NOT NULL OR s.excluded_secondary_types IS NOT NULL
+           OR s.include_featured IS NOT NULL) = $5)
 `
 
-func (q *Queries) CountSubscriptions(ctx context.Context, search pgtype.Text) (int64, error) {
-	row := q.db.QueryRow(ctx, countSubscriptions, search)
+type CountSubscriptionsParams struct {
+	Search     pgtype.Text
+	Synced     pgtype.Bool
+	ArtistType pgtype.Text
+	Country    pgtype.Text
+	Overridden pgtype.Bool
+}
+
+func (q *Queries) CountSubscriptions(ctx context.Context, arg CountSubscriptionsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSubscriptions,
+		arg.Search,
+		arg.Synced,
+		arg.ArtistType,
+		arg.Country,
+		arg.Overridden,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -110,17 +130,29 @@ const listSubscriptions = `-- name: ListSubscriptions :many
 SELECT s.artist_mbid, s.primary_types, s.excluded_secondary_types, s.include_featured, s.baseline_at, s.created_at, a.mbid, a.name, a.sort_name, a.disambiguation, a.type, a.country, a.last_synced_at, a.created_at
 FROM subscriptions s
 JOIN artists a ON a.mbid = s.artist_mbid
-WHERE $3::text IS NULL
-   OR a.name ILIKE '%' || $3 || '%'
-   OR a.sort_name ILIKE '%' || $3 || '%'
-ORDER BY lower(a.sort_name), a.mbid
+WHERE ($3::text IS NULL
+       OR a.name ILIKE '%' || $3 || '%'
+       OR a.sort_name ILIKE '%' || $3 || '%')
+  AND ($4::boolean IS NULL OR (a.last_synced_at IS NOT NULL) = $4)
+  AND ($5::text IS NULL OR a.type = $5)
+  AND ($6::text IS NULL OR a.country = $6)
+  AND ($7::boolean IS NULL
+       OR (s.primary_types IS NOT NULL OR s.excluded_secondary_types IS NOT NULL
+           OR s.include_featured IS NOT NULL) = $7)
+ORDER BY CASE WHEN $8::boolean THEN s.created_at END DESC,
+         lower(a.sort_name), a.mbid
 LIMIT $1 OFFSET $2
 `
 
 type ListSubscriptionsParams struct {
-	Limit  int32
-	Offset int32
-	Search pgtype.Text
+	Limit       int32
+	Offset      int32
+	Search      pgtype.Text
+	Synced      pgtype.Bool
+	ArtistType  pgtype.Text
+	Country     pgtype.Text
+	Overridden  pgtype.Bool
+	NewestFirst bool
 }
 
 type ListSubscriptionsRow struct {
@@ -128,9 +160,20 @@ type ListSubscriptionsRow struct {
 	Artist       Artist
 }
 
-// Search is a LIKE pattern without the surrounding %; NULL matches everything.
+// Filters: search is a LIKE pattern without the surrounding %; every NULL filter
+// matches everything. synced: whether the first sync is done; overridden: whether
+// any field of the per-artist filter is set.
 func (q *Queries) ListSubscriptions(ctx context.Context, arg ListSubscriptionsParams) ([]ListSubscriptionsRow, error) {
-	rows, err := q.db.Query(ctx, listSubscriptions, arg.Limit, arg.Offset, arg.Search)
+	rows, err := q.db.Query(ctx, listSubscriptions,
+		arg.Limit,
+		arg.Offset,
+		arg.Search,
+		arg.Synced,
+		arg.ArtistType,
+		arg.Country,
+		arg.Overridden,
+		arg.NewestFirst,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +224,62 @@ func (q *Queries) SubscribedAmong(ctx context.Context, mbids []uuid.UUID) ([]uui
 			return nil, err
 		}
 		items = append(items, artist_mbid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const subscriptionArtistTypes = `-- name: SubscriptionArtistTypes :many
+SELECT DISTINCT a.type::text
+FROM subscriptions s
+JOIN artists a ON a.mbid = s.artist_mbid
+WHERE a.type IS NOT NULL AND a.type <> ''
+ORDER BY 1
+`
+
+func (q *Queries) SubscriptionArtistTypes(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, subscriptionArtistTypes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var a_type string
+		if err := rows.Scan(&a_type); err != nil {
+			return nil, err
+		}
+		items = append(items, a_type)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const subscriptionCountries = `-- name: SubscriptionCountries :many
+SELECT DISTINCT a.country::text
+FROM subscriptions s
+JOIN artists a ON a.mbid = s.artist_mbid
+WHERE a.country IS NOT NULL AND a.country <> ''
+ORDER BY 1
+`
+
+func (q *Queries) SubscriptionCountries(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, subscriptionCountries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var a_country string
+		if err := rows.Scan(&a_country); err != nil {
+			return nil, err
+		}
+		items = append(items, a_country)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

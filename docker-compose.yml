@@ -29,8 +29,9 @@ services:
         required: false
     environment:
       DATABASE_URL: postgres://tracker:tracker@postgres:5432/tracker?sslmode=disable
-      SMTP_HOST: mailpit
-      SMTP_PORT: "1025"
+      # SMTP from .env; empty SMTP_HOST = the mailpit trap (nothing leaves the machine)
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: "${SMTP_PORT:-1025}"
       PUBLIC_BASE_URL: http://localhost:3000
     ports:
       - "8080:8080"

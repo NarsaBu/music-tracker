@@ -10,11 +10,15 @@ export interface RackLayoutViewProps extends RackLayoutViewModel {
 }
 
 export function RackLayoutView({
+  t,
   navItems,
   statusText,
   statusLed,
   lampOn,
   onLampChange,
+  langs,
+  lang,
+  onLangChange,
   children,
 }: RackLayoutViewProps) {
   return (
@@ -24,25 +28,39 @@ export function RackLayoutView({
         <header className={styles.receiver}>
           <div className={styles.brand}>
             <span className={styles.brandName}>Music Tracker</span>
-            <span className={styles.brandModel}>Model MT-1 · Release monitor</span>
+            <span className={styles.brandModel}>{t.model}</span>
           </div>
 
           <div className={styles.status}>
             <Led state={statusLed} />
-            <LcdDisplay label="Состояние сервера" size="sm">
+            <LcdDisplay label={t.serverStatus} size="sm">
               {statusText}
             </LcdDisplay>
           </div>
 
-          <ToggleSwitch
-            className={styles.lamp}
-            label="Lamp"
-            checked={lampOn}
-            onChange={onLampChange}
-            withLed={false}
-          />
+          <div className={styles.controls}>
+            <fieldset className={styles.lang}>
+              <legend className={styles.langLegend}>{t.language}</legend>
+              <div className={styles.langKeys}>
+                {langs.map((l) => (
+                  <label key={l} className={cx(styles.langKey, l === lang && styles.keyActive)}>
+                    <input
+                      type="radio"
+                      className="srOnly"
+                      name="lang"
+                      value={l}
+                      checked={l === lang}
+                      onChange={() => onLangChange(l)}
+                    />
+                    <span lang={l}>{l.toUpperCase()}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <ToggleSwitch label={t.lamp} checked={lampOn} onChange={onLampChange} withLed={false} />
+          </div>
 
-          <nav className={styles.selector} aria-label="Разделы">
+          <nav className={styles.selector} aria-label={t.sections}>
             {navItems.map((item) => (
               <NavLink
                 key={item.to}

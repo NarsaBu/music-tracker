@@ -1,5 +1,6 @@
-import { PRIMARY_TYPE_LABELS, PRIMARY_TYPES, SECONDARY_TYPES } from '@/entities/release/model';
+import { PRIMARY_TYPES, SECONDARY_TYPES } from '@/entities/release/model';
 import { WEEKDAYS, type DigestFrequency, type Weekday } from '@/entities/settings/model';
+import { useI18n } from '@/shared/i18n';
 import {
   EngravedInput,
   LcdDisplay,
@@ -12,14 +13,11 @@ import {
 import type { SettingsViewModel } from '../controller/useSettingsController';
 import styles from './SettingsView.module.css';
 
-const FREQUENCY_OPTIONS = [
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-] as const satisfies ReadonlyArray<{ value: DigestFrequency; label: string }>;
-
-const WEEKDAY_OPTIONS = WEEKDAYS.map((d) => ({ value: String(d.value), label: d.short }));
+const FREQUENCIES: readonly DigestFrequency[] = ['daily', 'weekly'];
 
 export function SettingsView(vm: SettingsViewModel) {
+  const { t: all } = useI18n();
+  const t = all.settings;
   const { settings: s, errors } = vm;
   const digest = s.email.digest;
 
@@ -31,46 +29,44 @@ export function SettingsView(vm: SettingsViewModel) {
         vm.onSave();
       }}
     >
-      <Panel title="Типы релизов" className={styles.primary}>
+      <Panel title={t.primaryTypes} className={styles.primary}>
         <div className={styles.switchRow}>
-          {PRIMARY_TYPES.map((t) => (
+          {PRIMARY_TYPES.map((type) => (
             <ToggleSwitch
-              key={t}
-              label={PRIMARY_TYPE_LABELS[t]}
-              checked={s.filters.primaryTypes.includes(t)}
-              onChange={() => vm.onTogglePrimaryType(t)}
+              key={type}
+              label={all.release.primaryTypes[type]}
+              checked={s.filters.primaryTypes.includes(type)}
+              onChange={() => vm.onTogglePrimaryType(type)}
             />
           ))}
         </div>
       </Panel>
 
-      <Panel title="Дополнительные типы" className={styles.secondary}>
-        <p className={styles.note}>
-          Включённые типы попадают в уведомления, выключенные — отсеиваются.
-        </p>
+      <Panel title={t.secondaryTypes} className={styles.secondary}>
+        <p className={styles.note}>{t.secondaryNote}</p>
         <div className={styles.switchGrid}>
-          {SECONDARY_TYPES.map((t) => (
+          {SECONDARY_TYPES.map((type) => (
             <ToggleSwitch
-              key={t}
-              label={t}
-              checked={!s.filters.excludedSecondaryTypes.includes(t)}
-              onChange={() => vm.onToggleSecondaryType(t)}
+              key={type}
+              label={all.release.secondaryTypes[type] ?? type}
+              checked={!s.filters.excludedSecondaryTypes.includes(type)}
+              onChange={() => vm.onToggleSecondaryType(type)}
             />
           ))}
         </div>
       </Panel>
 
-      <Panel title="Правила" className={styles.rules}>
+      <Panel title={t.rules} className={styles.rules}>
         <div className={styles.stack}>
           <ToggleSwitch
-            label="Featuring"
-            description="Релизы, где исполнитель — приглашённый участник. Можно переопределить для каждого исполнителя."
+            label={all.common.featuring}
+            description={t.featuringHint}
             checked={s.filters.includeFeatured}
             onChange={vm.onIncludeFeaturedChange}
           />
           <ToggleSwitch
-            label="Анонсы"
-            description="Сообщать о релизах с датой выхода в будущем."
+            label={t.announcements}
+            description={t.announcementsHint}
             checked={s.filters.notifyAnnouncements}
             onChange={vm.onNotifyAnnouncementsChange}
           />
@@ -78,56 +74,56 @@ export function SettingsView(vm: SettingsViewModel) {
       </Panel>
 
       <Panel
-        title="Email-дайджест"
+        title={t.email}
         className={styles.email}
         extra={
           <Led
             state={s.email.enabled ? 'ok' : 'off'}
-            label={s.email.enabled ? 'Включён' : 'Выключен'}
+            label={s.email.enabled ? t.enabled : t.disabled}
           />
         }
       >
         <div className={styles.emailGrid}>
           <ToggleSwitch
-            label="Отправлять"
+            label={t.send}
             checked={s.email.enabled}
             onChange={vm.onEmailEnabledChange}
           />
           <EngravedInput
             className={styles.emailTo}
-            label="Адрес"
+            label={t.address}
             type="email"
             autoComplete="email"
             placeholder="me@example.com"
             value={s.email.to}
-            error={errors.emailTo}
+            error={errors.emailTo && t.invalidEmail}
             disabled={!s.email.enabled}
             onChange={(e) => vm.onEmailToChange(e.target.value)}
           />
           <RotarySelector
-            label="Частота"
-            options={FREQUENCY_OPTIONS}
+            label={t.frequency}
+            options={FREQUENCIES.map((f) => ({ value: f, label: t[f] }))}
             value={digest.frequency}
             onChange={vm.onFrequencyChange}
             disabled={!s.email.enabled}
           />
           <RotarySelector
-            label="День недели"
-            options={WEEKDAY_OPTIONS}
+            label={t.weekday}
+            options={WEEKDAYS.map((d) => ({ value: String(d), label: t.weekdays[d] ?? '' }))}
             value={String(digest.weekday)}
             onChange={(v) => vm.onWeekdayChange(Number(v) as Weekday)}
             disabled={!s.email.enabled || digest.frequency !== 'weekly'}
           />
           <div className={styles.timeFields}>
             <EngravedInput
-              label="Время"
+              label={t.time}
               type="time"
               value={digest.time}
               disabled={!s.email.enabled}
               onChange={(e) => vm.onTimeChange(e.target.value)}
             />
             <EngravedInput
-              label="Часовой пояс"
+              label={t.timezone}
               value={digest.timezone}
               list="timezones"
               disabled={!s.email.enabled}
@@ -140,7 +136,7 @@ export function SettingsView(vm: SettingsViewModel) {
             </datalist>
           </div>
           <div className={styles.digestStatus}>
-            <LcdDisplay label="Расписание дайджеста" size="sm">
+            <LcdDisplay label={t.schedule} size="sm">
               {vm.nextDigestText}
             </LcdDisplay>
             {vm.lastDigestText && <span className={styles.note}>{vm.lastDigestText}</span>}
@@ -148,9 +144,9 @@ export function SettingsView(vm: SettingsViewModel) {
               onClick={vm.onSendTestEmail}
               disabled={!vm.canTestEmail}
               led={vm.testingEmail}
-              title={vm.canTestEmail ? undefined : 'Сначала сохраните адрес'}
+              title={vm.canTestEmail ? undefined : t.saveAddressFirst}
             >
-              Тестовое письмо
+              {t.testEmail}
             </PushButton>
             {vm.testEmailText && (
               <span
@@ -164,18 +160,15 @@ export function SettingsView(vm: SettingsViewModel) {
         </div>
       </Panel>
 
-      <Panel title="RSS / Atom" className={styles.rss}>
+      <Panel title={t.rss} className={styles.rss}>
         <div className={styles.stack}>
-          <ToggleSwitch label="Лента" checked={s.rss.enabled} onChange={vm.onRssEnabledChange} />
-          <p className={styles.note}>
-            Ссылка — личная: по ней лента доступна без входа. RSS 2.0 — та же ссылка с окончанием
-            .rss вместо .atom.
-          </p>
-          <LcdDisplay label="Адрес ленты" size="sm" className={styles.feedUrl}>
-            {s.rss.feedUrl || 'NO SIGNAL'}
+          <ToggleSwitch label={t.feed} checked={s.rss.enabled} onChange={vm.onRssEnabledChange} />
+          <p className={styles.note}>{t.rssNote}</p>
+          <LcdDisplay label={t.feedUrl} size="sm" className={styles.feedUrl}>
+            {s.rss.feedUrl || all.common.lcd.noSignal}
           </LcdDisplay>
           <PushButton onClick={vm.onRotateFeedToken} disabled={vm.rotating} led={vm.rotating}>
-            Перевыпустить ссылку
+            {t.rotate}
           </PushButton>
           {vm.rotateError && (
             <span className={styles.error} role="alert">
@@ -191,12 +184,10 @@ export function SettingsView(vm: SettingsViewModel) {
             {vm.saveError}
           </span>
         ) : (
-          <span className={styles.note}>
-            {vm.isDirty ? 'Есть несохранённые изменения' : 'Сохранено'}
-          </span>
+          <span className={styles.note}>{vm.isDirty ? t.dirty : t.saved}</span>
         )}
         <PushButton onClick={vm.onReset} disabled={!vm.isDirty || vm.saving}>
-          Сбросить
+          {t.reset}
         </PushButton>
         <PushButton
           type="submit"
@@ -204,7 +195,7 @@ export function SettingsView(vm: SettingsViewModel) {
           led={vm.isDirty || vm.saving}
           disabled={!vm.canSave}
         >
-          Сохранить
+          {t.save}
         </PushButton>
       </div>
     </form>

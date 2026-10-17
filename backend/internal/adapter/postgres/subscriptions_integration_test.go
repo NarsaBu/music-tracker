@@ -143,6 +143,63 @@ func TestSubscriptionRepository_ListSearchAndPaging(t *testing.T) {
 	}
 }
 
+func TestSubscriptionRepository_ListFiltersAndFacets(t *testing.T) {
+	resetTables(t)
+	ctx := context.Background()
+	yes := true
+	// Created in this order, so Sigur Rós is the newest subscription.
+	seedSubscription(t, domain.Artist{MBID: nirvana, Name: "Nirvana", SortName: "Nirvana", Type: "Group", Country: "US"},
+		domain.FilterOverride{IncludeFeatured: &yes})
+	seedSubscription(t, domain.Artist{MBID: radiohead, Name: "Radiohead", SortName: "Radiohead", Type: "Group", Country: "GB"},
+		domain.FilterOverride{})
+	seedSubscription(t, domain.Artist{MBID: sigurRos, Name: "Sigur Rós", SortName: "Sigur Rós", Type: "Person"},
+		domain.FilterOverride{})
+	if err := NewArtistRepository(testPool).MarkSynced(ctx, radiohead, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	repo := NewSubscriptionRepository(testPool)
+	no := false
+
+	tests := []struct {
+		name string
+		q    usecase.SubscriptionListQuery
+		want []string
+	}{
+		{"synced", usecase.SubscriptionListQuery{Synced: &yes}, []string{"Radiohead"}},
+		{"pending", usecase.SubscriptionListQuery{Synced: &no}, []string{"Nirvana", "Sigur Rós"}},
+		{"type", usecase.SubscriptionListQuery{ArtistType: "Group"}, []string{"Nirvana", "Radiohead"}},
+		{"country", usecase.SubscriptionListQuery{Country: "GB"}, []string{"Radiohead"}},
+		{"own filter", usecase.SubscriptionListQuery{Overridden: &yes}, []string{"Nirvana"}},
+		{"global filter", usecase.SubscriptionListQuery{Overridden: &no}, []string{"Radiohead", "Sigur Rós"}},
+		{"combined", usecase.SubscriptionListQuery{ArtistType: "Group", Synced: &no}, []string{"Nirvana"}},
+		{"newest first", usecase.SubscriptionListQuery{NewestFirst: true}, []string{"Sigur Rós", "Radiohead", "Nirvana"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.q.Limit = 10
+			got, total, err := repo.List(ctx, tt.q)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var names []string
+			for _, s := range got {
+				names = append(names, s.Artist.Name)
+			}
+			if !slices.Equal(names, tt.want) || total != len(tt.want) {
+				t.Errorf("got %v (total %d), want %v", names, total, tt.want)
+			}
+		})
+	}
+
+	facets, err := repo.Facets(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(facets.Countries, []string{"GB", "US"}) || !slices.Equal(facets.ArtistTypes, []string{"Group", "Person"}) {
+		t.Errorf("facets = %+v", facets)
+	}
+}
+
 func TestSubscriptionRepository_SubscribedAmong(t *testing.T) {
 	resetTables(t)
 	seedSubscription(t, domain.Artist{MBID: nirvana, Name: "Nirvana", SortName: "Nirvana"}, domain.FilterOverride{})

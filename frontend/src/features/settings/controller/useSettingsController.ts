@@ -14,11 +14,12 @@ import {
   useSendTestEmailMutation,
 } from '@/entities/settings/queries';
 import { ApiError } from '@/shared/api';
+import { useI18n, type Messages } from '@/shared/i18n';
 import { formatDateTime } from '@/shared/lib/format';
 
-function errorText(error: unknown, fallback: string): string {
+function errorText(error: unknown, fallback: string, t: Messages['settings']): string {
   if (error instanceof ApiError) {
-    if (error.status === 503) return 'Почтовый сервер недоступен или не настроен (SMTP_HOST)';
+    if (error.status === 503) return t.smtpDown;
     if (error.fields.length > 0)
       return error.fields.map((f) => `${f.field}: ${f.message}`).join('; ');
   }
@@ -27,6 +28,9 @@ function errorText(error: unknown, fallback: string): string {
 
 /** Settings screen ("amplifier panel", US-5, US-7, US-8): edit, save, test email, rotate feed. */
 export function useSettingsController(initial: SettingsState) {
+  const { t: all } = useI18n();
+  const t = all.settings;
+  const at = (iso: string) => formatDateTime(iso, all.locale);
   const [saved, setSaved] = useState(initial.settings);
   const [draft, setDraft] = useState(initial.settings);
   const [schedule, setSchedule] = useState({
@@ -52,8 +56,8 @@ export function useSettingsController(initial: SettingsState) {
     setDraft((s) => ({ ...s, email: { ...s.email, digest: { ...s.email.digest, ...patch } } }));
 
   let testEmailText: string | undefined;
-  if (testEmail.isSuccess) testEmailText = `Письмо отправлено на ${saved.email.to}`;
-  if (testEmail.isError) testEmailText = errorText(testEmail.error, 'Не удалось отправить письмо');
+  if (testEmail.isSuccess) testEmailText = t.testSent(saved.email.to);
+  if (testEmail.isError) testEmailText = errorText(testEmail.error, t.testFailed, t);
 
   return {
     settings: draft,
@@ -61,17 +65,15 @@ export function useSettingsController(initial: SettingsState) {
     isDirty,
     canSave,
     saving: save.isPending,
-    saveError: save.isError ? errorText(save.error, 'Не удалось сохранить настройки') : undefined,
-    nextDigestText: schedule.next
-      ? `Следующий дайджест: ${formatDateTime(schedule.next)}`
-      : 'Дайджест выключен',
-    lastDigestText: schedule.last ? `Последний: ${formatDateTime(schedule.last)}` : undefined,
+    saveError: save.isError ? errorText(save.error, t.saveFailed, t) : undefined,
+    nextDigestText: schedule.next ? t.nextDigest(at(schedule.next)) : t.digestOff,
+    lastDigestText: schedule.last ? t.lastDigest(at(schedule.last)) : undefined,
     canTestEmail: saved.email.to !== '' && !emailDirty && !testEmail.isPending,
     testingEmail: testEmail.isPending,
     testEmailText,
     testEmailFailed: testEmail.isError,
     rotating: rotate.isPending,
-    rotateError: rotate.isError ? 'Не удалось перевыпустить ссылку' : undefined,
+    rotateError: rotate.isError ? t.rotateFailed : undefined,
 
     onTogglePrimaryType: (t: PrimaryType) =>
       updateFilters({ primaryTypes: toggleItem(draft.filters.primaryTypes, t) }),

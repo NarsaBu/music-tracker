@@ -41,8 +41,10 @@
   min-width: var(--hit-target);
   min-height: 28px;
   cursor: pointer;
+
+  /* the last shift pushes side labels outward, so long words do not meet over the knob */
   transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(-1 * var(--radius)))
-    rotate(calc(-1 * var(--angle)));
+    rotate(calc(-1 * var(--angle))) translateX(calc(sin(var(--angle)) * 50%));
 }
 
 .root:disabled .mark {

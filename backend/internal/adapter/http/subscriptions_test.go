@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"music-tracker/backend/internal/domain"
+	"music-tracker/backend/internal/usecase"
 	"music-tracker/backend/internal/usecase/artist"
 )
 
@@ -46,7 +47,10 @@ func (f *fakeArtistUseCases) subscribe(_ context.Context, in artist.SubscribeInp
 
 func (f *fakeArtistUseCases) list(_ context.Context, in artist.ListInput) (artist.ListResult, error) {
 	f.listIn = in
-	return artist.ListResult{Items: []artist.SubscriptionView{sampleView()}, Total: 7}, f.err
+	return artist.ListResult{
+		Items: []artist.SubscriptionView{sampleView()}, Total: 7,
+		Facets: usecase.SubscriptionFacets{Countries: []string{"US"}},
+	}, f.err
 }
 
 func (f *fakeArtistUseCases) unsubscribe(_ context.Context, mbid string) error {
@@ -149,12 +153,17 @@ func TestSearchArtists_UpstreamDown(t *testing.T) {
 
 func TestListSubscriptions_Response(t *testing.T) {
 	f := &fakeArtistUseCases{}
-	rec := do(newArtistRouter(f), http.MethodGet, "/api/v1/subscriptions?q=nir&limit=20&offset=40", "")
+	rec := do(newArtistRouter(f), http.MethodGet,
+		"/api/v1/subscriptions?q=nir&status=synced&type=Group&country=US&filter=own&sort=added&limit=20&offset=40", "")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, body %s", rec.Code, rec.Body)
 	}
-	if f.listIn != (artist.ListInput{Search: "nir", Limit: 20, Offset: 40}) {
+	want := artist.ListInput{
+		Search: "nir", Status: "synced", ArtistType: "Group", Country: "US", Filter: "own", Sort: "added",
+		Limit: 20, Offset: 40,
+	}
+	if f.listIn != want {
 		t.Errorf("input = %+v", f.listIn)
 	}
 	var body struct {
@@ -171,13 +180,21 @@ func TestListSubscriptions_Response(t *testing.T) {
 			} `json:"filter"`
 			LastSyncedAt *time.Time `json:"last_synced_at"`
 		} `json:"items"`
-		Total int `json:"total"`
+		Total  int `json:"total"`
+		Facets struct {
+			Countries []string `json:"countries"`
+			Types     []string `json:"types"`
+		} `json:"facets"`
 	}
 	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
 	if body.Total != 7 || len(body.Items) != 1 {
 		t.Fatalf("page = %+v", body)
+	}
+	// types is an empty list, not null: the client can iterate it directly.
+	if len(body.Facets.Countries) != 1 || body.Facets.Types == nil {
+		t.Errorf("facets = %+v", body.Facets)
 	}
 	it := body.Items[0]
 	if it.Artist.Country == nil || *it.Artist.Country != "US" || it.LastSyncedAt != nil {

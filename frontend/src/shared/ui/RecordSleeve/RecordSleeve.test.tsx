@@ -16,4 +16,20 @@ describe('RecordSleeve', () => {
     render(<RecordSleeve title="Mezzanine" href="https://musicbrainz.org/x" />);
     expect(screen.getByRole('link', { name: 'Mezzanine' })).toHaveAttribute('target', '_blank');
   });
+
+  it('makes the cover a mouse-only link to the same page', () => {
+    const { container } = render(
+      <RecordSleeve
+        title="Mezzanine"
+        coverUrl="https://x/cover.jpg"
+        href="https://musicbrainz.org/x"
+      />,
+    );
+    const cover = container.querySelector('img')!.closest('a');
+    expect(cover).toHaveAttribute('href', 'https://musicbrainz.org/x');
+    expect(cover).toHaveAttribute('target', '_blank');
+    expect(cover).toHaveAttribute('tabindex', '-1');
+    // only the title link is exposed to assistive tech
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+  });
 });

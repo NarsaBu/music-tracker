@@ -60,6 +60,7 @@ frontend/
 │   ├── app/                        # bootstrap: роутер, провайдеры (QueryClient), layout «стойки»
 │   ├── shared/
 │   │   ├── api/                    # HttpClient, ApiError
+│   │   ├── i18n/                   # словари RU/EN, I18nProvider, useI18n (язык — переключатель в шапке)
 │   │   ├── ui/                     # UI-кит (View): Panel, ToggleSwitch, RecordSleeve, …
 │   │   │   └── theme/              # tokens.css, textures.svg, fonts.css
 │   │   ├── lib/                    # утилиты (частичные даты MusicBrainz и т.п.)

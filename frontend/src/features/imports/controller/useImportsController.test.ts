@@ -15,7 +15,7 @@ describe('useImportsController', () => {
     server.use(http.get('/api/v1/imports', () => HttpResponse.json({ items: [] })));
     const { result } = renderController();
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.lcdText).toBe('INSERT TAPE');
+    expect(result.current.lcdText).toBe('ВСТАВЬТЕ КАССЕТУ');
     expect(result.current.rows).toEqual([]);
     expect(result.current.spinning).toBe(false);
   });
@@ -41,7 +41,7 @@ describe('useImportsController', () => {
     await waitFor(() => expect(result.current.rows).toHaveLength(1));
     expect(uploads).toBe(1);
     expect(result.current.spinning).toBe(true);
-    expect(result.current.lcdText).toBe('PLAY 001/004');
+    expect(result.current.lcdText).toBe('▶ 001/004');
     expect(result.current.rows[0]).toMatchObject({
       progress: 25,
       led: 'on',
@@ -51,7 +51,7 @@ describe('useImportsController', () => {
 
     jobs = [importJobWire({ matched: 2, needs_review: 1, not_found: 1 })];
     await waitFor(() => expect(result.current.rows[0]?.processing).toBe(false), { timeout: 4000 });
-    expect(result.current.lcdText).toBe('STOP');
+    expect(result.current.lcdText).toBe('СТОП');
     expect(result.current.rows[0]).toMatchObject({
       counterText: '004/004',
       led: 'warn',

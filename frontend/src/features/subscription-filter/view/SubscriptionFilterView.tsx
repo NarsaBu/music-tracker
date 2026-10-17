@@ -1,87 +1,134 @@
-import { PRIMARY_TYPE_LABELS, PRIMARY_TYPES, SECONDARY_TYPES } from '@/entities/release/model';
-import { Led, Panel, ToggleSwitch } from '@/shared/ui';
+import type { ReactNode } from 'react';
+import { PRIMARY_TYPES, SECONDARY_TYPES } from '@/entities/release/model';
+import { useI18n } from '@/shared/i18n';
+import { Led, Panel, PushButton } from '@/shared/ui';
 import type { SubscriptionFilterViewModel } from '../controller/useSubscriptionFilterController';
 import styles from './SubscriptionFilterView.module.css';
 
+/**
+ * Compact per-artist filter: one row per field — an "own" key that takes the
+ * field over from the global settings, then latching keys for the values.
+ */
 export function SubscriptionFilterView(vm: SubscriptionFilterViewModel) {
+  const { t: all } = useI18n();
+  const t = all.filter;
   if (!vm.ready) return null;
   const busy = vm.saving;
 
   return (
     <Panel
-      title="Фильтр уведомлений"
-      extra={
-        <Led state={busy ? 'warn' : 'ok'} blink={busy} label={busy ? 'Сохраняю' : 'Сохранено'} />
-      }
+      title={t.title}
+      extra={<Led state={busy ? 'warn' : 'ok'} blink={busy} label={busy ? t.saving : t.saved} />}
     >
-      <p className={styles.note}>
-        По умолчанию действуют общие настройки. Включите «Своё», чтобы задать значение только для
-        этого исполнителя.
-      </p>
+      <p className={styles.note}>{t.note}</p>
       {vm.error && (
         <p className={styles.error} role="alert">
           {vm.error}
         </p>
       )}
 
-      <fieldset className={styles.row} disabled={busy}>
-        <legend className={styles.legend}>Типы релизов</legend>
-        <ToggleSwitch
-          label="Своё"
-          checked={vm.ownTypes}
-          onChange={vm.onOwnTypesChange}
-          withLed={false}
-        />
-        <div className={styles.switches}>
-          {PRIMARY_TYPES.map((t) => (
-            <ToggleSwitch
-              key={t}
-              label={PRIMARY_TYPE_LABELS[t]}
-              checked={vm.primaryTypes.includes(t)}
-              disabled={!vm.ownTypes}
-              onChange={() => vm.onTogglePrimaryType(t)}
-            />
-          ))}
-        </div>
-      </fieldset>
+      <Row legend={t.types} own={vm.ownTypes} onOwnChange={vm.onOwnTypesChange} busy={busy}>
+        {PRIMARY_TYPES.map((type) => (
+          <Key
+            key={type}
+            label={all.release.primaryTypes[type]}
+            on={vm.primaryTypes.includes(type)}
+            disabled={!vm.ownTypes}
+            onClick={() => vm.onTogglePrimaryType(type)}
+          />
+        ))}
+      </Row>
 
-      <fieldset className={styles.row} disabled={busy}>
-        <legend className={styles.legend}>Дополнительные типы</legend>
-        <ToggleSwitch
-          label="Своё"
-          checked={vm.ownSecondary}
-          onChange={vm.onOwnSecondaryChange}
-          withLed={false}
-        />
-        <div className={styles.switches}>
-          {SECONDARY_TYPES.map((t) => (
-            <ToggleSwitch
-              key={t}
-              label={t}
-              checked={!vm.excludedSecondaryTypes.includes(t)}
-              disabled={!vm.ownSecondary}
-              onChange={() => vm.onToggleSecondaryType(t)}
-            />
-          ))}
-        </div>
-      </fieldset>
+      <Row
+        legend={t.secondary}
+        own={vm.ownSecondary}
+        onOwnChange={vm.onOwnSecondaryChange}
+        busy={busy}
+      >
+        {SECONDARY_TYPES.map((type) => (
+          <Key
+            key={type}
+            label={all.release.secondaryTypes[type] ?? type}
+            on={!vm.excludedSecondaryTypes.includes(type)}
+            disabled={!vm.ownSecondary}
+            onClick={() => vm.onToggleSecondaryType(type)}
+          />
+        ))}
+      </Row>
 
-      <fieldset className={styles.row} disabled={busy}>
-        <legend className={styles.legend}>Featuring</legend>
-        <ToggleSwitch
-          label="Своё"
-          checked={vm.ownFeatured}
-          onChange={vm.onOwnFeaturedChange}
-          withLed={false}
-        />
-        <ToggleSwitch
-          label="Гостевые релизы"
-          description="Сообщать о релизах, где исполнитель — приглашённый участник."
-          checked={vm.includeFeatured}
+      <Row
+        legend={all.common.featuring}
+        own={vm.ownFeatured}
+        onOwnChange={vm.onOwnFeaturedChange}
+        busy={busy}
+      >
+        <Key
+          label={t.guestReleases}
+          title={all.common.featuringHint}
+          on={vm.includeFeatured}
           disabled={!vm.ownFeatured}
-          onChange={vm.onIncludeFeaturedChange}
+          onClick={() => vm.onIncludeFeaturedChange(!vm.includeFeatured)}
         />
-      </fieldset>
+      </Row>
     </Panel>
+  );
+}
+
+function Row({
+  legend,
+  own,
+  onOwnChange,
+  busy,
+  children,
+}: {
+  legend: string;
+  own: boolean;
+  onOwnChange: (own: boolean) => void;
+  busy: boolean;
+  children: ReactNode;
+}) {
+  const { t } = useI18n();
+  return (
+    <fieldset className={styles.row} disabled={busy}>
+      <legend className={styles.legend}>{legend}</legend>
+      <PushButton
+        size="sm"
+        variant="primary"
+        className={styles.own}
+        led={own}
+        aria-pressed={own}
+        onClick={() => onOwnChange(!own)}
+      >
+        {t.filter.own}
+      </PushButton>
+      <div className={styles.keys}>{children}</div>
+    </fieldset>
+  );
+}
+
+function Key({
+  label,
+  on,
+  disabled,
+  title,
+  onClick,
+}: {
+  label: string;
+  on: boolean;
+  disabled: boolean;
+  title?: string;
+  onClick: () => void;
+}) {
+  return (
+    <PushButton
+      size="sm"
+      led={on}
+      aria-pressed={on}
+      disabled={disabled}
+      title={title}
+      onClick={onClick}
+    >
+      {label}
+    </PushButton>
   );
 }

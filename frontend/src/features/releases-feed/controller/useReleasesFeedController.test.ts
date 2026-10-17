@@ -40,7 +40,7 @@ describe('useReleasesFeedController', () => {
     expect(result.current.records[0]).toMatchObject({
       featured: true,
       announcement: true,
-      typeLabel: 'Album',
+      typeLabel: 'Альбом',
       date: '10 окт 2026',
     });
     expect(result.current.records[0]?.foundText).toMatch(/^Гость: Björk/);

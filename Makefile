@@ -25,7 +25,8 @@ db: ## Start postgres and mailpit in docker
 
 .PHONY: run-backend
 run-backend: ## Run backend locally (needs `make db`)
-	@$(WITH_ENV) cd $(BACKEND) && go run ./cmd/tracker serve
+	@$(WITH_ENV) export SMTP_HOST=$${SMTP_HOST:-localhost} SMTP_PORT=$${SMTP_PORT:-1025}; \
+	 cd $(BACKEND) && go run ./cmd/tracker serve
 
 .PHONY: run-frontend
 run-frontend: ## Run Vite dev server on :5173 (proxies to :8080)

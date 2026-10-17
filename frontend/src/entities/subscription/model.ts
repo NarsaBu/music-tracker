@@ -25,9 +25,25 @@ export interface Subscription {
 export interface SubscriptionPage {
   items: Subscription[];
   total: number;
+  /** Filter values present in the catalogue. */
+  facets: { countries: string[]; types: string[] };
 }
 
-export interface SubscriptionListParams {
+export type SyncStatusFilter = 'synced' | 'pending';
+export type OverrideFilter = 'own' | 'global';
+export type SubscriptionSort = 'name' | 'added';
+
+/** Catalogue filters; an absent field matches everything. */
+export interface SubscriptionFilters {
+  status?: SyncStatusFilter;
+  /** MusicBrainz artist type, e.g. "Group". */
+  type?: string;
+  country?: string;
+  filter?: OverrideFilter;
+  sort?: SubscriptionSort;
+}
+
+export interface SubscriptionListParams extends SubscriptionFilters {
   search: string;
   limit: number;
   offset: number;

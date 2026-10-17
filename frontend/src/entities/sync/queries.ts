@@ -10,13 +10,15 @@ export const syncKeys = {
 };
 
 export const SYNC_POLL_MS = 2_000;
+/** Between runs: notices a scheduled run that started without this page. */
+export const SYNC_IDLE_POLL_MS = 30_000;
 
-/** Latest run; polls while it is in progress to drive the VU meter. */
+/** Latest run; polls often while it is in progress to drive the progress bar. */
 export function useLatestSyncRunQuery() {
   return useQuery({
     queryKey: syncKeys.latest,
     queryFn: syncApi.latest,
-    refetchInterval: (q) => (isRunning(q.state.data) ? SYNC_POLL_MS : false),
+    refetchInterval: (q) => (isRunning(q.state.data) ? SYNC_POLL_MS : SYNC_IDLE_POLL_MS),
   });
 }
 

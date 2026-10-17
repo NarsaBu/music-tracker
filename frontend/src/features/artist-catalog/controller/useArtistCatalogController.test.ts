@@ -47,7 +47,7 @@ describe('useArtistCatalogController', () => {
     expect(result.current.synced).toBe(true);
     expect(result.current.records[0]).toMatchObject({
       date: 'июн 1999',
-      typeLabel: 'Album',
+      typeLabel: 'Альбом',
       fresh: false,
     });
     expect(result.current.records[1]).toMatchObject({
@@ -61,6 +61,35 @@ describe('useArtistCatalogController', () => {
     act(() => result.current.onRoleChange('featured'));
     await waitFor(() => expect(result.current.records).toHaveLength(1));
     expect(roles).toEqual([null, 'featured']);
+  });
+
+  it('filters the catalog by release type without asking the server', async () => {
+    let calls = 0;
+    server.use(
+      http.get(`/api/v1/subscriptions/${SIGUR}`, () =>
+        HttpResponse.json(subscriptionWire(SIGUR, 'Sigur Rós', '2026-10-17T06:03:00Z')),
+      ),
+      http.get(`/api/v1/artists/${SIGUR}/release-groups`, () => {
+        calls++;
+        return HttpResponse.json({
+          items: [
+            releaseGroupWire(RG1, 'Ágætis byrjun'),
+            releaseGroupWire(RG2, 'Svefn-g-englar', 'main', { primary_type: 'ep' }),
+          ],
+        });
+      }),
+    );
+    const { result } = renderController();
+    await waitFor(() => expect(result.current.count).toBe(2));
+
+    act(() => result.current.onTypeChange('ep'));
+    expect(result.current.records.map((r) => r.title)).toEqual(['Svefn-g-englar']);
+    expect(result.current.count).toBe(1);
+    expect(result.current.filtered).toBe(true);
+
+    act(() => result.current.onTypeChange('broadcast'));
+    expect(result.current.records).toHaveLength(0);
+    expect(calls).toBe(1);
   });
 
   it('"check now" polls until the sync time changes, then reloads the catalog', async () => {

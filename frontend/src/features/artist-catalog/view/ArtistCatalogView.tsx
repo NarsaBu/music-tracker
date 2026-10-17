@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { useI18n } from '@/shared/i18n';
+import { LCD_BLANK, lcdCount } from '@/shared/lib/format';
 import {
   LcdDisplay,
   Led,
@@ -10,10 +12,7 @@ import {
   RotarySelector,
   TapeLabel,
 } from '@/shared/ui';
-import {
-  ROLE_OPTIONS,
-  type ArtistCatalogViewModel,
-} from '../controller/useArtistCatalogController';
+import type { ArtistCatalogViewModel } from '../controller/useArtistCatalogController';
 import styles from './ArtistCatalogView.module.css';
 
 export interface ArtistCatalogViewProps extends ArtistCatalogViewModel {
@@ -22,11 +21,13 @@ export interface ArtistCatalogViewProps extends ArtistCatalogViewModel {
 }
 
 export function ArtistCatalogView({ filterPanel, ...vm }: ArtistCatalogViewProps) {
+  const { t: all } = useI18n();
+  const t = all.catalog;
   if (vm.notSubscribed) {
     return (
-      <Panel title="Исполнитель">
+      <Panel title={t.artist}>
         <p>
-          На этого исполнителя нет подписки. <Link to="/artists/add">Найти на тюнере</Link>
+          {t.notSubscribed} <Link to="/artists/add">{t.findOnTuner}</Link>
         </p>
       </Panel>
     );
@@ -35,10 +36,10 @@ export function ArtistCatalogView({ filterPanel, ...vm }: ArtistCatalogViewProps
   return (
     <div className={styles.layout}>
       <Panel
-        title={vm.isLoading ? 'Исполнитель' : vm.name}
+        title={vm.isLoading ? t.artist : vm.name}
         extra={
-          <LcdDisplay label="Релизов в каталоге" size="sm">
-            {vm.recordsLoading ? '---' : `${String(vm.count).padStart(3, '0')} RG`}
+          <LcdDisplay label={t.count} size="sm">
+            {vm.recordsLoading ? LCD_BLANK : lcdCount(vm.count)}
           </LcdDisplay>
         }
       >
@@ -47,13 +48,11 @@ export function ArtistCatalogView({ filterPanel, ...vm }: ArtistCatalogViewProps
             {vm.details && <p>{vm.details}</p>}
             <p className={styles.sync}>
               <Led state={vm.checking ? 'warn' : vm.synced ? 'ok' : 'warn'} blink={vm.checking} />
-              <span aria-live="polite">{vm.checking ? 'Проверяю MusicBrainz…' : vm.syncText}</span>
+              <span aria-live="polite">{vm.checking ? t.checking : vm.syncText}</span>
             </p>
             {(vm.checkFailed || vm.checkStuck) && (
               <p className={styles.error} role="alert">
-                {vm.checkFailed
-                  ? 'Не удалось запустить проверку'
-                  : 'Проверка затянулась — MusicBrainz может быть недоступен, сервер повторит попытку позже'}
+                {vm.checkFailed ? t.checkFailed : t.checkStuck}
               </p>
             )}
             <PushButton
@@ -62,15 +61,23 @@ export function ArtistCatalogView({ filterPanel, ...vm }: ArtistCatalogViewProps
               disabled={vm.checking}
               onClick={vm.onCheckNow}
             >
-              Проверить сейчас
+              {t.checkNow}
             </PushButton>
           </div>
-          <RotarySelector
-            label="Роль"
-            options={ROLE_OPTIONS}
-            value={vm.role}
-            onChange={vm.onRoleChange}
-          />
+          <div className={styles.filters}>
+            <RotarySelector
+              label={t.type}
+              options={vm.typeOptions}
+              value={vm.type}
+              onChange={vm.onTypeChange}
+            />
+            <RotarySelector
+              label={t.role}
+              options={vm.roleOptions}
+              value={vm.role}
+              onChange={vm.onRoleChange}
+            />
+          </div>
         </div>
       </Panel>
 
@@ -78,14 +85,12 @@ export function ArtistCatalogView({ filterPanel, ...vm }: ArtistCatalogViewProps
 
       {!vm.recordsLoading && vm.records.length === 0 && (
         <p className={styles.note}>
-          {vm.synced
-            ? 'Релизов с такой ролью нет.'
-            : 'Каталог появится после первой проверки — обычно это занимает несколько секунд.'}
+          {vm.synced ? (vm.filtered ? t.noMatch : t.empty) : t.notSynced}
         </p>
       )}
 
       {vm.records.length > 0 && (
-        <RecordShelf label="Каталог релизов">
+        <RecordShelf label={t.shelf}>
           {vm.records.map((r) => (
             <RecordSleeve
               key={r.mbid}
@@ -100,9 +105,11 @@ export function ArtistCatalogView({ filterPanel, ...vm }: ArtistCatalogViewProps
                   {r.secondaryTypes.map((t) => (
                     <TapeLabel key={t}>{t}</TapeLabel>
                   ))}
-                  {r.featured && <TapeLabel>feat.</TapeLabel>}
-                  {r.announcement && <TapeLabel tone="accent">Анонс</TapeLabel>}
-                  {r.fresh && <TapeLabel tone="accent">Новое</TapeLabel>}
+                  {r.featured && <TapeLabel>{all.release.feat}</TapeLabel>}
+                  {r.announcement && (
+                    <TapeLabel tone="accent">{all.release.announcement}</TapeLabel>
+                  )}
+                  {r.fresh && <TapeLabel tone="accent">{all.release.fresh}</TapeLabel>}
                 </>
               }
             />
@@ -111,7 +118,7 @@ export function ArtistCatalogView({ filterPanel, ...vm }: ArtistCatalogViewProps
       )}
 
       <p className={styles.back}>
-        <Link to="/artists">← К картотеке</Link>
+        <Link to="/artists">{t.back}</Link>
       </p>
     </div>
   );

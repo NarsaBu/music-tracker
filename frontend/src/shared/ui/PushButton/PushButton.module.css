@@ -17,6 +17,19 @@
     box-shadow var(--dur-fast);
 }
 
+.sm {
+  gap: var(--space-1);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+}
+
+/* a latched key (aria-pressed) stays pressed in */
+.button[aria-pressed='true'] {
+  transform: translateY(1px);
+  box-shadow: var(--bevel-pressed);
+}
+
 .button:active:not(:disabled) {
   transform: translateY(1px);
   box-shadow: var(--bevel-pressed);

@@ -58,27 +58,21 @@ export const DEFAULT_SETTINGS: Settings = {
   rss: { enabled: true, feedUrl: '' },
 };
 
-export const WEEKDAYS: ReadonlyArray<{ value: Weekday; short: string }> = [
-  { value: 1, short: 'Пн' },
-  { value: 2, short: 'Вт' },
-  { value: 3, short: 'Ср' },
-  { value: 4, short: 'Чт' },
-  { value: 5, short: 'Пт' },
-  { value: 6, short: 'Сб' },
-  { value: 0, short: 'Вс' },
-];
+/** Weekdays in the order of the selector: Monday first. */
+export const WEEKDAYS: readonly Weekday[] = [1, 2, 3, 4, 5, 6, 0];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Error codes; the view turns them into text. */
 export interface SettingsErrors {
-  emailTo?: string;
+  emailTo?: 'invalid';
 }
 
 /** Business validation shared by every form that edits Settings. */
 export function validateSettings(s: Settings): SettingsErrors {
   const errors: SettingsErrors = {};
   if (s.email.enabled && !EMAIL_RE.test(s.email.to.trim())) {
-    errors.emailTo = 'Укажите корректный адрес';
+    errors.emailTo = 'invalid';
   }
   return errors;
 }

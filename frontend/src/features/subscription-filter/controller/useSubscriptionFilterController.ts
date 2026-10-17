@@ -2,12 +2,14 @@ import type { PrimaryType, SecondaryType } from '@/entities/release/model';
 import { toggleItem } from '@/entities/settings/model';
 import type { FilterPatch } from '@/entities/subscription/model';
 import { useSubscriptionQuery, useUpdateFilterMutation } from '@/entities/subscription/queries';
+import { useI18n } from '@/shared/i18n';
 
 /**
  * Per-artist filter override (US-5, US-6). Every change is saved at once; a field
  * switched back to "global" is sent as null and follows the settings again.
  */
 export function useSubscriptionFilterController(mbid: string) {
+  const { t } = useI18n();
   const subscription = useSubscriptionQuery(mbid);
   const update = useUpdateFilterMutation(mbid);
   const filter = subscription.data?.filter;
@@ -19,7 +21,7 @@ export function useSubscriptionFilterController(mbid: string) {
   return {
     ready: !!filter,
     saving: update.isPending,
-    error: update.isError ? 'Не удалось сохранить фильтр' : undefined,
+    error: update.isError ? t.filter.saveFailed : undefined,
 
     primaryTypes,
     ownTypes: filter?.primaryTypes.overridden ?? false,

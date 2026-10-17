@@ -30,14 +30,28 @@ describe('subscription api', () => {
     server.use(
       http.get('/api/v1/subscriptions', ({ request }) => {
         url = request.url;
-        return HttpResponse.json({ items: [wire], total: 1 });
+        return HttpResponse.json({
+          items: [wire],
+          total: 1,
+          facets: { countries: ['IS'], types: ['Group'] },
+        });
       }),
     );
 
-    const page = await api.list({ search: 'sig', limit: 50, offset: 0 });
+    const page = await api.list({
+      search: 'sig',
+      limit: 50,
+      offset: 0,
+      status: 'synced',
+      country: 'IS',
+      type: undefined,
+    });
 
-    expect(new URL(url).searchParams.toString()).toBe('limit=50&offset=0&q=sig');
+    expect(new URL(url).searchParams.toString()).toBe(
+      'limit=50&offset=0&q=sig&status=synced&country=IS',
+    );
     expect(page.total).toBe(1);
+    expect(page.facets).toEqual({ countries: ['IS'], types: ['Group'] });
     expect(page.items[0]).toMatchObject({
       artist: { sortName: 'Sigur Rós', country: 'IS' },
       filter: { includeFeatured: { value: true, overridden: true } },

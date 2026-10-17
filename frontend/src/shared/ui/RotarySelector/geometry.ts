@@ -1,6 +1,9 @@
-/** Spread of the marks around the knob, degrees from 12 o'clock. */
+/**
+ * Spread of the marks around the knob, degrees from 12 o'clock. From four
+ * options on, a narrower arc puts the upper labels on top of each other.
+ */
 function arcFor(count: number): number {
-  return count <= 3 ? 90 : count <= 5 ? 120 : 180;
+  return count <= 3 ? 90 : 180;
 }
 
 /** Angle of option i out of count, evenly spread over the arc. */

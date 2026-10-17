@@ -8,19 +8,26 @@ export interface PushButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   variant?: 'primary' | 'secondary';
   /** Shows an LED in the cap; true lights it. */
   led?: boolean;
+  /** sm — a low key for dense rows, e.g. on/off keys of a filter. */
+  size?: 'md' | 'sm';
 }
 
 /** Mechanical push button: raised at rest, pressed in while active. */
 export function PushButton({
   variant = 'secondary',
   led,
+  size = 'md',
   type = 'button',
   className,
   children,
   ...rest
 }: PushButtonProps) {
   return (
-    <button type={type} className={cx(styles.button, styles[variant], className)} {...rest}>
+    <button
+      type={type}
+      className={cx(styles.button, styles[variant], size === 'sm' && styles.sm, className)}
+      {...rest}
+    >
       {led !== undefined && <Led state={led ? 'on' : 'off'} />}
       <span>{children}</span>
     </button>

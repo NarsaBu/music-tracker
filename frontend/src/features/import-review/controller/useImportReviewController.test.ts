@@ -54,7 +54,7 @@ describe('useImportReviewController', () => {
     expect(nirvana?.candidates[1]).toEqual({
       mbid: UK,
       name: 'Nirvana',
-      details: '60s band from the UK · Group · GB · 1965–',
+      details: '60s band from the UK · Группа · GB · 1965–',
       score: 100,
     });
     // Nothing found: the manual MBID field is the only choice.

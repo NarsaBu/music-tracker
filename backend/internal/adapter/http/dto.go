@@ -60,6 +60,18 @@ type pageDTO[T any] struct {
 	Total int `json:"total"`
 }
 
+// subscriptionPageDTO is a page of subscriptions plus the values to offer as filters.
+type subscriptionPageDTO struct {
+	Items  []subscriptionDTO `json:"items"`
+	Total  int               `json:"total"`
+	Facets facetsDTO         `json:"facets"`
+}
+
+type facetsDTO struct {
+	Countries []string `json:"countries"`
+	Types     []string `json:"types"`
+}
+
 // subscribeRequest: a missing or null override field means "use the global setting".
 type subscribeRequest struct {
 	MBID                   string                `json:"mbid"`

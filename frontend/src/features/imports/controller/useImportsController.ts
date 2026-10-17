@@ -3,7 +3,8 @@ import { progressOf, toReviewOf, type ImportJob } from '@/entities/import/model'
 import { useImportsQuery, useUploadImportMutation } from '@/entities/import/queries';
 import type { LedState } from '@/shared/ui';
 import { ApiError } from '@/shared/api';
-import { formatDateTime } from '@/shared/lib/format';
+import { useI18n, type Messages } from '@/shared/i18n';
+import { formatDateTime, lcdPair } from '@/shared/lib/format';
 
 export const ACCEPTED_FILES = '.txt,.csv,text/plain,text/csv';
 export const MAX_FILE_BYTES = 1 << 20;
@@ -22,52 +23,52 @@ export interface ImportRow {
   toReview: number;
 }
 
-const pad = (n: number) => String(n).padStart(3, '0');
-
-function toRow(job: ImportJob): ImportRow {
+function toRow(job: ImportJob, all: Messages): ImportRow {
+  const t = all.imports;
   const toReview = toReviewOf(job);
   const done = job.total - job.counts.pending;
-  const parts = [`добавлено ${job.counts.matched}`];
-  if (toReview) parts.push(`ждут разбора ${toReview}`);
-  if (job.counts.skipped) parts.push(`пропущено ${job.counts.skipped}`);
+  const parts = [t.added(job.counts.matched)];
+  if (toReview) parts.push(t.toReview(toReview));
+  if (job.counts.skipped) parts.push(t.skipped(job.counts.skipped));
   return {
     id: job.id,
     filename: job.filename,
-    createdText: formatDateTime(job.createdAt),
+    createdText: formatDateTime(job.createdAt, all.locale),
     progress: progressOf(job),
-    counterText: `${pad(done)}/${pad(job.total)}`,
+    counterText: lcdPair(done, job.total),
     led: !job.finished ? 'on' : toReview ? 'warn' : 'ok',
     processing: !job.finished,
-    statusText: (job.finished ? '' : 'Идёт сопоставление · ') + parts.join(' · '),
+    statusText: (job.finished ? '' : t.matching) + parts.join(' · '),
     toReview,
   };
 }
 
-function uploadErrorText(error: unknown): string {
+function uploadErrorText(error: unknown, t: Messages['imports']): string {
   if (error instanceof ApiError && error.status === 422) {
-    const detail = error.fields?.[0]?.message ?? error.detail;
-    return `Файл не принят${detail ? `: ${detail}` : ''}`;
+    return t.rejected(error.fields?.[0]?.message ?? error.detail ?? '');
   }
-  return 'Не удалось загрузить файл';
+  return t.uploadFailed;
 }
 
 /** Import screen ("cassette deck", US-2): upload a file, watch the imports progress. */
 export function useImportsController() {
+  const { t: all } = useI18n();
+  const t = all.imports;
   const [tapeLabel, setTapeLabel] = useState<string>();
   const [localError, setLocalError] = useState<string>();
   const imports = useImportsQuery();
   const upload = useUploadImportMutation();
 
-  const rows = (imports.data ?? []).map(toRow);
+  const rows = (imports.data ?? []).map((job) => toRow(job, all));
   const playing = rows.find((r) => r.processing);
 
   const lcdText = upload.isPending
-    ? 'LOADING…'
+    ? t.lcd.loading
     : playing
-      ? `PLAY ${playing.counterText}`
+      ? t.lcd.play(playing.counterText)
       : rows.length
-        ? 'STOP'
-        : 'INSERT TAPE';
+        ? t.lcd.stop
+        : t.lcd.insert;
 
   return {
     lcdText,
@@ -75,7 +76,7 @@ export function useImportsController() {
     uploading: upload.isPending,
     /** The reels spin while a file is uploaded or matched. */
     spinning: upload.isPending || !!playing,
-    uploadError: localError ?? (upload.isError ? uploadErrorText(upload.error) : undefined),
+    uploadError: localError ?? (upload.isError ? uploadErrorText(upload.error, t) : undefined),
     rows,
     isLoading: imports.isPending,
     isError: imports.isError,
@@ -84,7 +85,7 @@ export function useImportsController() {
       upload.reset();
       // Checked here too, so a big file is not sent only to be rejected.
       if (file.size > MAX_FILE_BYTES) {
-        setLocalError('Файл больше 1 МБ — разбейте список на части');
+        setLocalError(t.tooBig);
         return;
       }
       setLocalError(undefined);

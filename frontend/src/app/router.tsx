@@ -20,7 +20,7 @@ export const router = createBrowserRouter([
       { path: 'imports', element: <ImportsPage /> },
       { path: 'imports/:id', element: <ImportReviewPage /> },
       { path: 'settings', element: <SettingsPage /> },
-      { path: '*', element: <PlaceholderPage title="Не найдено" stage="404" /> },
+      { path: '*', element: <PlaceholderPage stage="404" /> },
     ],
   },
 ]);

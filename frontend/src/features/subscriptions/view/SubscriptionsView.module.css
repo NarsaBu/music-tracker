@@ -71,11 +71,37 @@
   color: var(--text-on-plastic);
 }
 
-.pager {
+/* compact selects in one wrapping row under the search */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--space-3) var(--space-4);
+  align-items: end;
+  padding-top: var(--space-4);
+  margin-top: var(--space-4);
+  border-top: 1px solid rgb(0 0 0 / 15%);
+}
+
+.reset {
+  grid-column: span 2;
+  justify-self: start;
+  white-space: nowrap;
+}
+
+.listHead {
   display: flex;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  padding: 0 var(--space-2);
+  scroll-margin-top: var(--space-4);
+}
+
+.range {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--text-on-plastic);
 }
 
 .cardLink {

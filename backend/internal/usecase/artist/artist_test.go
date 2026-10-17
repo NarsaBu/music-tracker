@@ -205,6 +205,46 @@ func TestListSubscriptions(t *testing.T) {
 	}
 }
 
+func TestListSubscriptions_Filters(t *testing.T) {
+	store := memory.NewStore()
+	synced := time.Now()
+	yes := true
+	store.Artists[radiohead] = domain.Artist{MBID: radiohead, Name: "Radiohead", SortName: "Radiohead", Type: "Group", Country: "GB", LastSyncedAt: &synced}
+	store.Artists[nirvana] = domain.Artist{MBID: nirvana, Name: "Nirvana", SortName: "Nirvana", Type: "Group", Country: "US"}
+	store.Subs[radiohead] = domain.Subscription{}
+	store.Subs[nirvana] = domain.Subscription{Override: domain.FilterOverride{IncludeFeatured: &yes}}
+	uc := NewListSubscriptions(store.SubscriptionRepo(), store)
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		in   ListInput
+		want string
+	}{
+		{ListInput{Status: StatusSynced}, "Radiohead"},
+		{ListInput{Status: StatusPending}, "Nirvana"},
+		{ListInput{Filter: FilterOwn}, "Nirvana"},
+		{ListInput{Filter: FilterGlobal, Country: " GB "}, "Radiohead"},
+	} {
+		res, err := uc.Execute(ctx, tt.in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Total != 1 || res.Items[0].Artist.Name != tt.want {
+			t.Errorf("%+v: got %+v, want %s", tt.in, res.Items, tt.want)
+		}
+		if len(res.Facets.Countries) != 2 || len(res.Facets.ArtistTypes) != 1 {
+			t.Errorf("facets = %+v", res.Facets)
+		}
+	}
+
+	for _, in := range []ListInput{{Status: "done"}, {Filter: "mine"}, {Sort: "random"}} {
+		var verr *domain.ValidationError
+		if _, err := uc.Execute(ctx, in); !errors.As(err, &verr) || len(verr.Fields) != 1 {
+			t.Errorf("%+v: error = %v, want one field error", in, err)
+		}
+	}
+}
+
 func TestListReleaseGroups(t *testing.T) {
 	store := memory.NewStore()
 	store.Artists[nirvana] = domain.Artist{MBID: nirvana}

@@ -36,13 +36,27 @@ const subscriptionSchema = z
     createdAt: created_at,
   }));
 
-const pageSchema = z.object({ items: z.array(subscriptionSchema), total: z.number() });
+const pageSchema = z.object({
+  items: z.array(subscriptionSchema),
+  total: z.number(),
+  facets: z
+    .object({ countries: z.array(z.string()), types: z.array(z.string()) })
+    .default({ countries: [], types: [] }),
+});
 
 export function createSubscriptionApi(http: HttpClient) {
   return {
-    list: ({ search, limit, offset }: SubscriptionListParams): Promise<SubscriptionPage> => {
+    list: ({
+      search,
+      limit,
+      offset,
+      ...filters
+    }: SubscriptionListParams): Promise<SubscriptionPage> => {
       const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
       if (search) params.set('q', search);
+      for (const [key, value] of Object.entries(filters)) {
+        if (value) params.set(key, value);
+      }
       return http.get(`/api/v1/subscriptions?${params}`, pageSchema);
     },
     subscribe: (req: SubscribeRequest): Promise<Subscription> =>

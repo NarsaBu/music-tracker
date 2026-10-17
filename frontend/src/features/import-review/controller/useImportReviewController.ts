@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { formatLifeSpan } from '@/entities/artist/model';
+import { artistTypeLabel, formatLifeSpan } from '@/entities/artist/model';
 import {
   isResolvable,
   progressOf,
@@ -14,6 +14,7 @@ import {
   useResolveItemMutation,
 } from '@/entities/import/queries';
 import { ApiError } from '@/shared/api';
+import { useI18n, type Messages } from '@/shared/i18n';
 
 export type ReviewTab = 'review' | 'matched' | 'skipped' | 'all';
 
@@ -24,21 +25,7 @@ const TAB_STATUSES: Record<ReviewTab, readonly ImportItemStatus[]> = {
   all: [],
 };
 
-export const TAB_OPTIONS: ReadonlyArray<{ value: ReviewTab; label: string }> = [
-  { value: 'review', label: 'Разбор' },
-  { value: 'matched', label: 'Добавлены' },
-  { value: 'skipped', label: 'Пропущены' },
-  { value: 'all', label: 'Все' },
-];
-
-export const STATUS_TEXT: Record<ImportItemStatus, string> = {
-  pending: 'в очереди',
-  matched: 'подписка оформлена',
-  needs_review: 'несколько тёзок',
-  not_found: 'не найден',
-  skipped: 'пропущен',
-  failed: 'ошибка',
-};
+export const TABS: readonly ReviewTab[] = ['review', 'matched', 'skipped', 'all'];
 
 /** Value of the "someone else" option of a card. */
 export const OTHER = 'other';
@@ -83,20 +70,22 @@ export interface LineRow {
   artist: { mbid: string; name: string } | null;
 }
 
-function resolveErrorText(error: unknown): string {
+function resolveErrorText(error: unknown, t: Messages): string {
   if (error instanceof ApiError) {
-    if (error.status === 409) return 'Эту строку уже разобрали';
-    if (error.status === 503) return 'MusicBrainz не отвечает, попробуйте через минуту';
+    if (error.status === 409) return t.review.alreadyResolved;
+    if (error.status === 503) return t.common.musicbrainzDown;
     if (error.status === 422)
-      return `Не принято: ${error.fields?.[0]?.message ?? error.detail ?? ''}`;
+      return t.review.rejected(error.fields?.[0]?.message ?? error.detail ?? '');
   }
-  return 'Не удалось сохранить выбор';
+  return t.review.saveFailed;
 }
 
 const featuredOf = (item: ImportItem) => item.includeFeatured ?? false;
 
 /** Import review screen ("index cards with marks", US-3): settle ambiguous lines. */
 export function useImportReviewController(id: string) {
+  const { t } = useI18n();
+  const statusText = (s: ImportItemStatus) => t.review.status[s];
   const [tab, setTab] = useState<ReviewTab>('review');
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
 
@@ -125,12 +114,17 @@ export function useImportReviewController(id: string) {
               id: it.id,
               lineNo: it.lineNo,
               rawValue: it.rawValue,
-              statusText: STATUS_TEXT[it.status],
+              statusText: statusText(it.status),
               error: it.error,
               candidates: it.candidates.map((c) => ({
                 mbid: c.mbid,
                 name: c.name,
-                details: [c.disambiguation, c.type, c.country, formatLifeSpan(c.lifeSpan)]
+                details: [
+                  c.disambiguation,
+                  artistTypeLabel(c.type, t.common),
+                  c.country,
+                  formatLifeSpan(c.lifeSpan),
+                ]
                   .filter(Boolean)
                   .join(' · '),
                 score: c.score,
@@ -141,7 +135,7 @@ export function useImportReviewController(id: string) {
               featured: d.featured ?? featuredOf(it),
               canConfirm: !!choice && busyId !== it.id,
               busy: busyId === it.id,
-              errorText: failedId === it.id ? resolveErrorText(resolve.error) : undefined,
+              errorText: failedId === it.id ? resolveErrorText(resolve.error, t) : undefined,
             };
           })
       : [];
@@ -152,7 +146,7 @@ export function useImportReviewController(id: string) {
           id: it.id,
           lineNo: it.lineNo,
           rawValue: it.rawValue,
-          statusText: STATUS_TEXT[it.status],
+          statusText: statusText(it.status),
           artist: it.artist,
         }));
 
@@ -173,6 +167,7 @@ export function useImportReviewController(id: string) {
       pending: j?.counts.pending ?? 0,
     },
     tab,
+    tabOptions: TABS.map((value) => ({ value, label: t.review.tabs[value] })),
     cards,
     rows,
 
@@ -188,7 +183,7 @@ export function useImportReviewController(id: string) {
       if (!item || !card?.choice) return;
       const mbid = card.choice === OTHER ? card.other.trim() : card.choice;
       if (!mbid) {
-        patchDraft(itemId, { otherError: 'Вставьте MBID или ссылку на исполнителя в MusicBrainz' });
+        patchDraft(itemId, { otherError: t.review.otherRequired });
         return;
       }
       // Only a change is sent: otherwise the CSV value (or the global setting) stays.

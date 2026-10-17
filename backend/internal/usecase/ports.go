@@ -61,10 +61,25 @@ type JobQueue interface {
 }
 
 // SubscriptionListQuery selects a page of subscriptions; Search matches artist names.
+// Zero-valued filters match everything.
 type SubscriptionListQuery struct {
 	Search string
-	Limit  int
-	Offset int
+	// Synced: true — the first sync is done, false — still pending.
+	Synced     *bool
+	ArtistType string
+	Country    string
+	// Overridden: true — some field of the per-artist filter is set.
+	Overridden *bool
+	// NewestFirst orders by subscription time instead of artist sort name.
+	NewestFirst bool
+	Limit       int
+	Offset      int
+}
+
+// SubscriptionFacets are the filter values present among the subscriptions.
+type SubscriptionFacets struct {
+	Countries   []string
+	ArtistTypes []string
 }
 
 type SubscriptionRepository interface {
@@ -75,6 +90,7 @@ type SubscriptionRepository interface {
 	// Delete returns domain.ErrNotFound when the artist is not subscribed.
 	Delete(ctx context.Context, artist domain.MBID) error
 	List(ctx context.Context, q SubscriptionListQuery) (items []domain.Subscription, total int, err error)
+	Facets(ctx context.Context) (SubscriptionFacets, error)
 	// UpdateOverride replaces the filter override; domain.ErrNotFound when not subscribed.
 	UpdateOverride(ctx context.Context, artist domain.MBID, o domain.FilterOverride) error
 	// SubscribedAmong returns the subset of artists that have a subscription.

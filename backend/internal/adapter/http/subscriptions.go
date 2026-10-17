@@ -73,7 +73,7 @@ func (h *artistHandler) search(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, itemsDTO[candidateDTO]{Items: mapSlice(found, toCandidateDTO)})
 }
 
-// GET /subscriptions?q=&limit=&offset=
+// GET /subscriptions?q=&status=&type=&country=&filter=&sort=&limit=&offset=
 func (h *artistHandler) list(w http.ResponseWriter, r *http.Request) {
 	limit, err := queryInt(r, "limit")
 	if err != nil {
@@ -85,14 +85,24 @@ func (h *artistHandler) list(w http.ResponseWriter, r *http.Request) {
 		respondError(h.log, w, r, err)
 		return
 	}
+	q := r.URL.Query()
 	res, err := h.uc.List.Execute(r.Context(), artist.ListInput{
-		Search: r.URL.Query().Get("q"), Limit: limit, Offset: offset,
+		Search: q.Get("q"), Status: q.Get("status"), ArtistType: q.Get("type"),
+		Country: q.Get("country"), Filter: q.Get("filter"), Sort: q.Get("sort"),
+		Limit: limit, Offset: offset,
 	})
 	if err != nil {
 		respondError(h.log, w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, pageDTO[subscriptionDTO]{Items: mapSlice(res.Items, toSubscriptionDTO), Total: res.Total})
+	writeJSON(w, http.StatusOK, subscriptionPageDTO{
+		Items: mapSlice(res.Items, toSubscriptionDTO),
+		Total: res.Total,
+		Facets: facetsDTO{
+			Countries: nonNilSlice(res.Facets.Countries),
+			Types:     nonNilSlice(res.Facets.ArtistTypes),
+		},
+	})
 }
 
 // POST /subscriptions → 201 when created, 200 when the artist was already subscribed.

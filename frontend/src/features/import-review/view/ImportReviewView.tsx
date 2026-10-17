@@ -1,4 +1,6 @@
 import { Link } from 'react-router';
+import { useI18n } from '@/shared/i18n';
+import { lcdCount } from '@/shared/lib/format';
 import {
   EngravedInput,
   IndexCard,
@@ -14,19 +16,18 @@ import {
 } from '@/shared/ui';
 import {
   OTHER,
-  TAB_OPTIONS,
   type ImportReviewViewModel,
   type ReviewCard,
 } from '../controller/useImportReviewController';
 import styles from './ImportReviewView.module.css';
 
-const pad = (n: number) => String(n).padStart(3, '0');
-
 export function ImportReviewView(vm: ImportReviewViewModel) {
+  const { t: all } = useI18n();
+  const t = all.review;
   if (vm.notFound) {
     return (
-      <Panel title="Разбор импорта">
-        <p className={styles.note}>Такого импорта нет.</p>
+      <Panel title={t.title}>
+        <p className={styles.note}>{t.notFound}</p>
         <BackLink />
       </Panel>
     );
@@ -35,27 +36,27 @@ export function ImportReviewView(vm: ImportReviewViewModel) {
   return (
     <div className={styles.layout}>
       <Panel
-        title={vm.filename ? `Разбор · ${vm.filename}` : 'Разбор импорта'}
+        title={vm.filename ? t.titleOf(vm.filename) : t.title}
         extra={
           vm.processing && (
-            <LcdDisplay label="Обработано" size="sm">
+            <LcdDisplay label={t.processed} size="sm">
               {`${vm.progress}%`}
             </LcdDisplay>
           )
         }
       >
         <div className={styles.summary}>
-          {vm.processing && <VuMeter value={vm.progress} label="Прогресс сопоставления" />}
+          {vm.processing && <VuMeter value={vm.progress} label={t.progress} />}
           <dl className={styles.counters}>
-            <Counter label="Строк" value={vm.counts.total} />
-            <Counter label="Добавлено" value={vm.counts.matched} />
-            <Counter label="Ждут разбора" value={vm.counts.toReview} />
-            <Counter label="Пропущено" value={vm.counts.skipped} />
-            {vm.processing && <Counter label="В очереди" value={vm.counts.pending} />}
+            <Counter label={t.lines} value={vm.counts.total} />
+            <Counter label={t.added} value={vm.counts.matched} />
+            <Counter label={t.toReview} value={vm.counts.toReview} />
+            <Counter label={t.skipped} value={vm.counts.skipped} />
+            {vm.processing && <Counter label={t.queued} value={vm.counts.pending} />}
           </dl>
           <RotarySelector
-            label="Показать"
-            options={TAB_OPTIONS}
+            label={t.show}
+            options={vm.tabOptions}
             value={vm.tab}
             onChange={vm.onTabChange}
           />
@@ -65,20 +66,16 @@ export function ImportReviewView(vm: ImportReviewViewModel) {
       {vm.isError && (
         <p className={styles.message} role="alert">
           <Led state="warn" />
-          Не удалось связаться с сервером
+          {all.common.serverUnreachable}
         </p>
       )}
 
       {vm.tab === 'review' && !vm.isLoading && vm.cards.length === 0 && (
-        <p className={styles.message}>
-          {vm.processing
-            ? 'Пока разбирать нечего — строки ещё сопоставляются.'
-            : 'Всё разобрано: спорных строк не осталось.'}
-        </p>
+        <p className={styles.message}>{vm.processing ? t.stillMatching : t.allDone}</p>
       )}
 
       {vm.cards.length > 0 && (
-        <ul className={styles.cards} aria-label="Строки для разбора">
+        <ul className={styles.cards} aria-label={t.cards}>
           {vm.cards.map((c) => (
             <li key={c.id}>
               <ReviewCardView card={c} vm={vm} />
@@ -88,11 +85,11 @@ export function ImportReviewView(vm: ImportReviewViewModel) {
       )}
 
       {vm.tab !== 'review' && !vm.isLoading && vm.rows.length === 0 && (
-        <p className={styles.message}>Здесь пусто.</p>
+        <p className={styles.message}>{t.empty}</p>
       )}
 
       {vm.rows.length > 0 && (
-        <Panel title="Строки файла">
+        <Panel title={t.fileLines}>
           <ol className={styles.lines}>
             {vm.rows.map((r) => (
               <li key={r.id} className={styles.line}>
@@ -119,26 +116,29 @@ function Counter({ label, value }: { label: string; value: number }) {
     <div className={styles.counter}>
       <dt>{label}</dt>
       <dd>
-        <LcdDisplay size="sm">{pad(value)}</LcdDisplay>
+        <LcdDisplay size="sm">{lcdCount(value)}</LcdDisplay>
       </dd>
     </div>
   );
 }
 
 function BackLink() {
+  const { t } = useI18n();
   return (
     <p className={styles.back}>
-      <Link to="/imports">← К кассетной деке</Link>
+      <Link to="/imports">{t.review.back}</Link>
     </p>
   );
 }
 
 function ReviewCardView({ card: c, vm }: { card: ReviewCard; vm: ImportReviewViewModel }) {
+  const { t: all } = useI18n();
+  const t = all.review;
   const name = `choice-${c.id}`;
   return (
     <IndexCard
       title={c.rawValue}
-      tab={`стр. ${c.lineNo}`}
+      tab={t.line(c.lineNo)}
       tiltSeed={c.id}
       extra={
         <span className={styles.mark}>
@@ -154,24 +154,24 @@ function ReviewCardView({ card: c, vm }: { card: ReviewCard; vm: ImportReviewVie
             disabled={!c.canConfirm}
             led={c.busy}
             onClick={() => vm.onConfirm(c.id)}
-            aria-label={`Подписаться: ${c.rawValue}`}
+            aria-label={t.confirmOf(c.rawValue)}
           >
-            Подписать
+            {t.confirm}
           </PushButton>
           <PushButton
             disabled={c.busy}
             onClick={() => vm.onSkip(c.id)}
-            aria-label={`Пропустить: ${c.rawValue}`}
+            aria-label={t.skipOf(c.rawValue)}
           >
-            Пропустить
+            {t.skip}
           </PushButton>
         </>
       }
     >
-      {c.error && <p className={styles.cardNote}>Ошибка: {c.error}</p>}
+      {c.error && <p className={styles.cardNote}>{t.error(c.error)}</p>}
       <fieldset className={styles.choices} disabled={c.busy}>
         <legend className={styles.legend}>
-          {c.candidates.length ? 'Кто это?' : 'В MusicBrainz не нашлось — укажите сами'}
+          {c.candidates.length ? t.whoIsIt : t.notInMusicBrainz}
         </legend>
         {c.candidates.map((o) => (
           <label key={o.mbid} className={styles.choice}>
@@ -186,7 +186,7 @@ function ReviewCardView({ card: c, vm }: { card: ReviewCard; vm: ImportReviewVie
               <span className={styles.choiceName}>{o.name}</span>
               {o.details && <span className={styles.choiceDetails}>{o.details}</span>}
             </span>
-            <SignalMeter value={o.score} label="Совпадение" />
+            <SignalMeter value={o.score} label={all.common.match} />
           </label>
         ))}
         {c.candidates.length > 0 && (
@@ -199,13 +199,13 @@ function ReviewCardView({ card: c, vm }: { card: ReviewCard; vm: ImportReviewVie
               onChange={() => vm.onChoose(c.id, OTHER)}
             />
             <span className={styles.choiceText}>
-              <span className={styles.choiceName}>Другой исполнитель</span>
+              <span className={styles.choiceName}>{t.other}</span>
             </span>
           </label>
         )}
         {c.choice === OTHER && (
           <EngravedInput
-            label="MBID или ссылка"
+            label={t.mbidOrLink}
             autoComplete="off"
             spellCheck={false}
             placeholder="https://musicbrainz.org/artist/…"
@@ -216,8 +216,8 @@ function ReviewCardView({ card: c, vm }: { card: ReviewCard; vm: ImportReviewVie
         )}
       </fieldset>
       <ToggleSwitch
-        label="Featuring"
-        description="Сообщать и о релизах, где исполнитель — гость. Выключено — как в общих настройках."
+        label={all.common.featuring}
+        description={all.common.featuringHint}
         checked={c.featured}
         disabled={c.busy}
         onChange={(v) => vm.onFeaturedChange(c.id, v)}
@@ -227,7 +227,7 @@ function ReviewCardView({ card: c, vm }: { card: ReviewCard; vm: ImportReviewVie
           {c.errorText}
         </p>
       )}
-      {c.busy && <TapeLabel tone="accent">штампую…</TapeLabel>}
+      {c.busy && <TapeLabel tone="accent">{t.stamping}</TapeLabel>}
     </IndexCard>
   );
 }

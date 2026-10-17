@@ -1,39 +1,40 @@
-import { useBackendStatus, type BackendStatus } from '@/entities/system/queries';
+import { useBackendStatus } from '@/entities/system/queries';
 import { useTheme } from '@/app/theme/useTheme';
+import { LANGS, useI18n, type Lang, type Messages } from '@/shared/i18n';
 
 export interface NavItem {
   to: string;
   label: string;
 }
 
-export const NAV_ITEMS: readonly NavItem[] = [
-  { to: '/', label: 'Feed' },
-  { to: '/artists', label: 'Artists' },
-  { to: '/imports', label: 'Import' },
-  { to: '/settings', label: 'Settings' },
+const NAV: ReadonlyArray<{ to: string; key: keyof Messages['layout']['nav'] }> = [
+  { to: '/', key: 'feed' },
+  { to: '/artists', key: 'artists' },
+  { to: '/imports', key: 'imports' },
+  { to: '/settings', key: 'settings' },
 ];
-
-const STATUS_TEXT: Record<BackendStatus, string> = {
-  checking: 'TUNING…',
-  online: 'ONLINE',
-  offline: 'OFFLINE',
-};
 
 export function useRackLayoutController() {
   const status = useBackendStatus();
   const { theme, setTheme } = useTheme();
+  const { lang, setLang, t } = useI18n();
 
   return {
-    navItems: NAV_ITEMS,
-    statusText: STATUS_TEXT[status],
+    t: t.layout,
+    navItems: NAV.map((n): NavItem => ({ to: n.to, label: t.layout.nav[n.key] })),
+    statusText: t.layout.status[status],
     statusLed:
       status === 'online'
         ? ('ok' as const)
         : status === 'offline'
           ? ('on' as const)
           : ('warn' as const),
-    lampOn: theme === 'night',
-    onLampChange: (on: boolean) => setTheme(on ? 'night' : 'day'),
+    // The lamp lights the room: on is the day theme.
+    lampOn: theme === 'day',
+    onLampChange: (on: boolean) => setTheme(on ? 'day' : 'night'),
+    langs: LANGS,
+    lang,
+    onLangChange: (next: Lang) => setLang(next),
   };
 }
 

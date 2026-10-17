@@ -1,3 +1,5 @@
+import type { Messages } from '@/shared/i18n';
+
 /** MusicBrainz partial dates: "YYYY", "YYYY-MM" or "YYYY-MM-DD". */
 export interface LifeSpan {
   begin: string | null;
@@ -30,4 +32,12 @@ export function formatLifeSpan({ begin, end, ended }: LifeSpan): string {
   const to = end?.slice(0, 4) ?? (ended ? '?' : '');
   if (!from && !to) return '';
   return `${from || '?'}–${to}`;
+}
+
+/** MusicBrainz artist type ("Person", "Group", …) in the UI language. */
+export function artistTypeLabel(
+  type: string | null | undefined,
+  t: Pick<Messages['common'], 'artistTypes'>,
+): string | null {
+  return type ? (t.artistTypes[type] ?? type) : null;
 }

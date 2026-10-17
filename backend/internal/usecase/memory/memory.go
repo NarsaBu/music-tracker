@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -158,15 +159,50 @@ func (r *SubscriptionRepo) List(_ context.Context, q usecase.SubscriptionListQue
 	var all []domain.Subscription
 	for mbid, sub := range r.s.Subs {
 		sub.Artist = r.s.Artists[mbid]
-		if strings.Contains(strings.ToLower(sub.Artist.Name), strings.ToLower(q.Search)) {
+		if matchesListQuery(sub, q) {
 			all = append(all, sub)
 		}
 	}
 	slices.SortFunc(all, func(a, b domain.Subscription) int {
+		if q.NewestFirst {
+			if c := b.CreatedAt.Compare(a.CreatedAt); c != 0 {
+				return c
+			}
+		}
 		return strings.Compare(strings.ToLower(a.Artist.SortName), strings.ToLower(b.Artist.SortName))
 	})
 	page := all[min(q.Offset, len(all)):min(q.Offset+q.Limit, len(all))]
 	return page, len(all), nil
+}
+
+func matchesListQuery(sub domain.Subscription, q usecase.SubscriptionListQuery) bool {
+	a := sub.Artist
+	o := sub.Override
+	overridden := o.PrimaryTypes != nil || o.ExcludedSecondaryTypes != nil || o.IncludeFeatured != nil
+	return strings.Contains(strings.ToLower(a.Name), strings.ToLower(q.Search)) &&
+		(q.Synced == nil || *q.Synced == (a.LastSyncedAt != nil)) &&
+		(q.ArtistType == "" || a.Type == q.ArtistType) &&
+		(q.Country == "" || a.Country == q.Country) &&
+		(q.Overridden == nil || *q.Overridden == overridden)
+}
+
+func (r *SubscriptionRepo) Facets(_ context.Context) (usecase.SubscriptionFacets, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	countries, types := map[string]bool{}, map[string]bool{}
+	for mbid := range r.s.Subs {
+		a := r.s.Artists[mbid]
+		if a.Country != "" {
+			countries[a.Country] = true
+		}
+		if a.Type != "" {
+			types[a.Type] = true
+		}
+	}
+	return usecase.SubscriptionFacets{
+		Countries:   slices.Sorted(maps.Keys(countries)),
+		ArtistTypes: slices.Sorted(maps.Keys(types)),
+	}, nil
 }
 
 func (r *SubscriptionRepo) UpdateOverride(_ context.Context, mbid domain.MBID, o domain.FilterOverride) error {

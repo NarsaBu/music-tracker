@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { useI18n } from '@/shared/i18n';
 import { cx } from '@/shared/lib/cx';
 import { Led } from '../Led/Led';
 import styles from './ToggleSwitch.module.css';
@@ -25,6 +26,7 @@ export function ToggleSwitch({
   className,
 }: ToggleSwitchProps) {
   const id = useId();
+  const { t } = useI18n();
   const descriptionId = description ? `${id}-desc` : undefined;
 
   return (
@@ -40,11 +42,11 @@ export function ToggleSwitch({
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className={styles.switch} aria-hidden>
-        <span className={styles.mark}>on</span>
+        <span className={styles.mark}>{t.common.switchOn}</span>
         <span className={styles.nut}>
           <span className={styles.lever} />
         </span>
-        <span className={styles.mark}>off</span>
+        <span className={styles.mark}>{t.common.switchOff}</span>
       </span>
       <span className={styles.text}>
         <span className={styles.label}>

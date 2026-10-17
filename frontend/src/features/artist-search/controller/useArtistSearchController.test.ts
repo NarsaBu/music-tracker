@@ -14,7 +14,7 @@ describe('useArtistSearchController', () => {
   it('is idle until something is typed', () => {
     const { result } = renderController();
     expect(result.current.status).toBe('idle');
-    expect(result.current.lcdText).toBe('NO SIGNAL');
+    expect(result.current.lcdText).toBe('НЕТ СИГНАЛА');
     expect(result.current.stations).toEqual([]);
   });
 
@@ -34,10 +34,10 @@ describe('useArtistSearchController', () => {
 
     await waitFor(() => expect(result.current.status).toBe('results'));
     expect(queries).toEqual(['sigur']);
-    expect(result.current.lcdText).toBe('1 STATIONS');
+    expect(result.current.lcdText).toBe('СТАНЦИЙ: 1');
     expect(result.current.stations[0]).toMatchObject({
       name: 'Sigur Rós',
-      details: 'Icelandic post‐rock band · Group',
+      details: 'Icelandic post‐rock band · Группа',
       years: '1994–',
       subscribed: false,
     });

@@ -11,6 +11,12 @@
   margin-bottom: var(--space-2);
 }
 
+.sleeveLink {
+  display: block;
+  color: inherit;
+  cursor: pointer;
+}
+
 /* the disc peeks from behind the sleeve and slides out on hover */
 .disc {
   position: absolute;
@@ -26,6 +32,13 @@
 .record:hover .disc,
 .record:focus-within .disc {
   transform: translateX(30%) rotate(30deg);
+}
+
+/* lift the hovered record above its right neighbour so the disc is not covered */
+.record:hover,
+.record:focus-within {
+  position: relative;
+  z-index: 1;
 }
 
 .cover,
