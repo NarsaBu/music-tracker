@@ -1,0 +1,64 @@
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# ---------- IDE ----------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.iml
+
+# ---------- Env / secrets ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---------- Go (backend) ----------
+backend/bin/
+backend/tmp/
+/tracker
+*.exe
+*.test
+*.out
+coverage.*
+*.prof
+go.work
+go.work.sum
+# air (hot reload)
+.air.toml.local
+build-errors.log
+
+# ---------- Node / React (frontend) ----------
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/coverage/
+*.local
+*.tsbuildinfo
+.vite/
+.eslintcache
+.stylelintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
+
+# ---------- Docker / local data ----------
+.data/
+pgdata/
+docker-compose.override.yml
+
+# ---------- Logs ----------
+logs/
+*.log
