@@ -9,9 +9,12 @@ import (
 	"os"
 
 	httpadapter "music-tracker/backend/internal/adapter/http"
+	"music-tracker/backend/internal/adapter/musicbrainz"
 	"music-tracker/backend/internal/adapter/postgres"
 	"music-tracker/backend/internal/infrastructure/config"
 	"music-tracker/backend/internal/infrastructure/observability"
+	"music-tracker/backend/internal/usecase"
+	"music-tracker/backend/internal/usecase/artist"
 )
 
 func serve(ctx context.Context) error {
@@ -42,9 +45,26 @@ func serve(ctx context.Context) error {
 	}
 	defer pool.Close()
 
+	catalog := musicbrainz.NewClient(musicbrainz.Config{
+		BaseURL:   cfg.MusicBrainz.BaseURL,
+		UserAgent: cfg.MusicBrainz.UserAgent,
+		RateLimit: cfg.MusicBrainz.RateLimit,
+	})
+	tx := postgres.NewTxManager(pool)
+	artists := postgres.NewArtistRepository(pool)
+	subs := postgres.NewSubscriptionRepository(pool)
+	settings := postgres.NewSettingsRepository(pool)
+	clock := usecase.SystemClock{}
+
 	router := httpadapter.NewRouter(httpadapter.Deps{
 		Logger:    log,
 		Readiness: pool,
+		Artists: httpadapter.ArtistUseCases{
+			Search:      artist.NewSearchArtists(catalog, subs),
+			Subscribe:   artist.NewSubscribe(catalog, artists, subs, settings, tx, clock),
+			Unsubscribe: artist.NewUnsubscribe(subs),
+			List:        artist.NewListSubscriptions(subs, settings),
+		},
 	})
 
 	srv := &http.Server{

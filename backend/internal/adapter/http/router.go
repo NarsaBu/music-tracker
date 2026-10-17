@@ -13,6 +13,7 @@ import (
 type Deps struct {
 	Logger    *slog.Logger
 	Readiness Pinger
+	Artists   ArtistUseCases
 }
 
 func NewRouter(d Deps) http.Handler {
@@ -26,7 +27,16 @@ func NewRouter(d Deps) http.Handler {
 	r.Get("/healthz", health.live)
 	r.Get("/readyz", health.ready)
 
+	artists := &artistHandler{uc: d.Artists, log: d.Logger}
+
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/catalog/artists", artists.search)
+		r.Route("/subscriptions", func(r chi.Router) {
+			r.Get("/", artists.list)
+			r.Post("/", artists.subscribe)
+			r.Delete("/{mbid}", artists.unsubscribe)
+		})
+
 		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 			writeProblem(w, r, http.StatusNotFound, "Not found", "")
 		})

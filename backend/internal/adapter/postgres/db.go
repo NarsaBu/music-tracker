@@ -11,9 +11,34 @@ import (
 	"music-tracker/backend/internal/adapter/postgres/sqlc"
 )
 
+// enumTypes are the custom types pgx must learn on connect: without them arrays
+// of enums (e.g. release_primary_type[]) can be neither encoded nor scanned.
+// Each enum is followed by its array type. Migrations must run before NewPool.
+var enumTypes = []string{
+	"release_primary_type", "_release_primary_type",
+	"credit_role", "_credit_role",
+	"notification_channel", "_notification_channel",
+	"notification_status", "_notification_status",
+	"digest_frequency", "_digest_frequency",
+	"import_item_status", "_import_item_status",
+}
+
 // NewPool connects to PostgreSQL and verifies the connection.
 func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(ctx, dsn)
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, fmt.Errorf("parse database url: %w", err)
+	}
+	cfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		types, err := conn.LoadTypes(ctx, enumTypes)
+		if err != nil {
+			return fmt.Errorf("load enum types: %w", err)
+		}
+		conn.TypeMap().RegisterTypes(types)
+		return nil
+	}
+
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("create pool: %w", err)
 	}
@@ -44,8 +69,6 @@ func (m *TxManager) WithinTx(ctx context.Context, fn func(ctx context.Context) e
 
 // queries returns sqlc queries bound to the transaction from ctx, or to the pool.
 // Repositories call it at the start of every method.
-//
-//nolint:unused // used by repositories starting from stage 1
 func queries(ctx context.Context, pool *pgxpool.Pool) *sqlc.Queries {
 	if tx, ok := ctx.Value(txKey{}).(pgx.Tx); ok {
 		return sqlc.New(tx)

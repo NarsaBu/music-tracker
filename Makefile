@@ -76,6 +76,10 @@ test: test-backend test-frontend ## Run all tests
 test-backend:
 	cd $(BACKEND) && go test -race ./...
 
+.PHONY: test-integration
+test-integration: ## Run backend integration tests (PostgreSQL via testcontainers, needs docker)
+	cd $(BACKEND) && go test -race -tags integration ./...
+
 .PHONY: test-frontend
 test-frontend:
 	cd $(FRONTEND) && npm test

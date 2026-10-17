@@ -21,9 +21,12 @@ jobs:
         run: go tool sqlc diff
       - run: go vet ./...
       - run: go test -race ./...
+      - name: integration tests (testcontainers)
+        run: go test -race -tags integration ./internal/adapter/postgres/...
       - uses: golangci/golangci-lint-action@v8
         with:
           working-directory: backend
+          args: --build-tags integration
 
   frontend:
     runs-on: ubuntu-latest

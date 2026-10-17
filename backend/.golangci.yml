@@ -16,6 +16,9 @@ linters:
     - errorlint
     - misspell
   exclusions:
+    # The v1 default: doc comments on every exported symbol are not required.
+    presets:
+      - comments
     paths:
       - internal/adapter/postgres/sqlc
     rules:

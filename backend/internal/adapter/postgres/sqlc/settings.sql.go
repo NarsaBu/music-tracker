@@ -9,6 +9,23 @@ import (
 	"context"
 )
 
+const getFilterDefaults = `-- name: GetFilterDefaults :one
+SELECT primary_types, excluded_secondary_types, include_featured FROM settings WHERE id = 1
+`
+
+type GetFilterDefaultsRow struct {
+	PrimaryTypes           []ReleasePrimaryType
+	ExcludedSecondaryTypes []string
+	IncludeFeatured        bool
+}
+
+func (q *Queries) GetFilterDefaults(ctx context.Context) (GetFilterDefaultsRow, error) {
+	row := q.db.QueryRow(ctx, getFilterDefaults)
+	var i GetFilterDefaultsRow
+	err := row.Scan(&i.PrimaryTypes, &i.ExcludedSecondaryTypes, &i.IncludeFeatured)
+	return i, err
+}
+
 const getSettings = `-- name: GetSettings :one
 SELECT id, primary_types, excluded_secondary_types, include_featured, notify_announcements, email_enabled, email_to, digest_frequency, digest_weekday, digest_time, timezone, last_digest_at, next_digest_at, rss_enabled, feed_token FROM settings WHERE id = 1
 `

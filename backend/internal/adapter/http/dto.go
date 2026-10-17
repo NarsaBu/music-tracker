@@ -1,0 +1,134 @@
+package http
+
+import (
+	"time"
+
+	"music-tracker/backend/internal/domain"
+	"music-tracker/backend/internal/usecase/artist"
+)
+
+// HTTP DTOs are separate from domain entities (docs/03-backend.md §4); empty
+// optional strings are sent as null.
+
+type artistDTO struct {
+	MBID           string  `json:"mbid"`
+	Name           string  `json:"name"`
+	SortName       string  `json:"sort_name"`
+	Disambiguation string  `json:"disambiguation"`
+	Type           *string `json:"type"`
+	Country        *string `json:"country"`
+}
+
+type lifeSpanDTO struct {
+	Begin *string `json:"begin"`
+	End   *string `json:"end"`
+	Ended bool    `json:"ended"`
+}
+
+type candidateDTO struct {
+	artistDTO
+	LifeSpan   lifeSpanDTO `json:"life_span"`
+	Score      int         `json:"score"`
+	Subscribed bool        `json:"subscribed"`
+}
+
+type overridableDTO[T any] struct {
+	Value      T    `json:"value"`
+	Overridden bool `json:"overridden"`
+}
+
+type filterDTO struct {
+	PrimaryTypes           overridableDTO[[]domain.PrimaryType] `json:"primary_types"`
+	ExcludedSecondaryTypes overridableDTO[[]string]             `json:"excluded_secondary_types"`
+	IncludeFeatured        overridableDTO[bool]                 `json:"include_featured"`
+}
+
+type subscriptionDTO struct {
+	Artist       artistDTO  `json:"artist"`
+	Filter       filterDTO  `json:"filter"`
+	LastSyncedAt *time.Time `json:"last_synced_at"`
+	BaselineAt   time.Time  `json:"baseline_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+}
+
+type itemsDTO[T any] struct {
+	Items []T `json:"items"`
+}
+
+type pageDTO[T any] struct {
+	Items []T `json:"items"`
+	Total int `json:"total"`
+}
+
+// subscribeRequest: a missing or null override field means "use the global setting".
+type subscribeRequest struct {
+	MBID                   string                `json:"mbid"`
+	PrimaryTypes           *[]domain.PrimaryType `json:"primary_types"`
+	ExcludedSecondaryTypes *[]string             `json:"excluded_secondary_types"`
+	IncludeFeatured        *bool                 `json:"include_featured"`
+}
+
+func (r subscribeRequest) toInput() artist.SubscribeInput {
+	in := artist.SubscribeInput{MBID: r.MBID, Override: domain.FilterOverride{IncludeFeatured: r.IncludeFeatured}}
+	if r.PrimaryTypes != nil {
+		in.Override.PrimaryTypes = append([]domain.PrimaryType{}, *r.PrimaryTypes...)
+	}
+	if r.ExcludedSecondaryTypes != nil {
+		in.Override.ExcludedSecondaryTypes = append([]string{}, *r.ExcludedSecondaryTypes...)
+	}
+	return in
+}
+
+func toArtistDTO(a domain.Artist) artistDTO {
+	return artistDTO{
+		MBID:           string(a.MBID),
+		Name:           a.Name,
+		SortName:       a.SortName,
+		Disambiguation: a.Disambiguation,
+		Type:           nullIfEmpty(a.Type),
+		Country:        nullIfEmpty(a.Country),
+	}
+}
+
+func toCandidateDTO(c artist.Candidate) candidateDTO {
+	return candidateDTO{
+		artistDTO: toArtistDTO(c.Artist),
+		LifeSpan: lifeSpanDTO{
+			Begin: nullIfEmpty(c.LifeSpan.Begin),
+			End:   nullIfEmpty(c.LifeSpan.End),
+			Ended: c.LifeSpan.Ended,
+		},
+		Score:      c.Score,
+		Subscribed: c.Subscribed,
+	}
+}
+
+func toSubscriptionDTO(v artist.SubscriptionView) subscriptionDTO {
+	f := v.Filter
+	return subscriptionDTO{
+		Artist: toArtistDTO(v.Artist),
+		Filter: filterDTO{
+			PrimaryTypes:           overridableDTO[[]domain.PrimaryType](f.PrimaryTypes),
+			ExcludedSecondaryTypes: overridableDTO[[]string](f.ExcludedSecondaryTypes),
+			IncludeFeatured:        overridableDTO[bool](f.IncludeFeatured),
+		},
+		LastSyncedAt: v.Artist.LastSyncedAt,
+		BaselineAt:   v.BaselineAt,
+		CreatedAt:    v.CreatedAt,
+	}
+}
+
+func mapSlice[T, R any](in []T, f func(T) R) []R {
+	out := make([]R, len(in))
+	for i, v := range in {
+		out[i] = f(v)
+	}
+	return out
+}
+
+func nullIfEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}

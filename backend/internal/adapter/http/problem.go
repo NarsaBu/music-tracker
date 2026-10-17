@@ -1,10 +1,14 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
+
+	"github.com/go-chi/chi/v5/middleware"
 
 	"music-tracker/backend/internal/domain"
 )
@@ -72,6 +76,23 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		// Internal details are logged by the caller, never exposed.
 		writeProblem(w, r, http.StatusInternalServerError, "Internal server error", "")
 	}
+}
+
+// respondError logs failures that are not the client's fault and writes the problem response.
+func respondError(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
+	attrs := []slog.Attr{
+		slog.String("request_id", middleware.GetReqID(r.Context())),
+		slog.String("error", err.Error()),
+	}
+	switch {
+	case errors.Is(err, domain.ErrValidation), errors.Is(err, domain.ErrNotFound),
+		errors.Is(err, domain.ErrAlreadyExists), errors.Is(err, domain.ErrUnauthorized):
+	case errors.Is(err, domain.ErrUpstreamUnavailable), errors.Is(err, context.Canceled):
+		log.LogAttrs(r.Context(), slog.LevelWarn, "request failed", attrs...)
+	default:
+		log.LogAttrs(r.Context(), slog.LevelError, "request failed", attrs...)
+	}
+	writeError(w, r, err)
 }
 
 func slug(s string) string {

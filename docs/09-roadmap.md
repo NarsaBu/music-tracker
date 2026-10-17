@@ -9,11 +9,12 @@
 - [x] Layout «стойки», эталонная страница «Настройки» (локальное состояние)
 - [x] CI: lint + test для обеих частей
 
-## Этап 1. MusicBrainz и подписки
-- [ ] `adapter/musicbrainz`: клиент, rate limiter, retry, фикстуры
-- [ ] Use cases: `SearchArtists`, `Subscribe`, `Unsubscribe`, `ListSubscriptions`
-- [ ] Миграции: `settings`, `artists`, `subscriptions`
-- [ ] UI: поиск исполнителя (тюнер), список подписок (картотека)
+## Этап 1. MusicBrainz и подписки ✅
+- [x] `adapter/musicbrainz`: клиент, rate limiter, retry, фикстуры
+- [x] Use cases: `SearchArtists`, `Subscribe`, `Unsubscribe`, `ListSubscriptions`
+- [x] Миграции: `settings`, `artists`, `subscriptions`
+- [x] UI: поиск исполнителя (тюнер), список подписок (картотека)
+- Отложено: `GET /catalog/artists/{mbid}`, `GET/PATCH /subscriptions/{mbid}` (этапы 2–3); задача `sync_artist(baseline)` при подписке — этап 2
 
 ## Этап 2. Синхронизация
 - [ ] Таблицы `release_groups`, `artist_release_groups`, `jobs`, `sync_runs`

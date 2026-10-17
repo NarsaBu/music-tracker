@@ -1,4 +1,5 @@
 export { EngravedInput, type EngravedInputProps } from './EngravedInput/EngravedInput';
+export { IndexCard, type IndexCardProps } from './IndexCard/IndexCard';
 export { LcdDisplay, type LcdDisplayProps } from './LcdDisplay/LcdDisplay';
 export { Led, type LedProps, type LedState } from './Led/Led';
 export { Panel, type PanelProps } from './Panel/Panel';
@@ -8,4 +9,5 @@ export {
   type RotaryOption,
   type RotarySelectorProps,
 } from './RotarySelector/RotarySelector';
+export { SignalMeter, type SignalMeterProps } from './SignalMeter/SignalMeter';
 export { ToggleSwitch, type ToggleSwitchProps } from './ToggleSwitch/ToggleSwitch';

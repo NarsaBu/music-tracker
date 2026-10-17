@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -387,6 +388,17 @@ func AllReleasePrimaryTypeValues() []ReleasePrimaryType {
 	}
 }
 
+type Artist struct {
+	Mbid           uuid.UUID
+	Name           string
+	SortName       string
+	Disambiguation string
+	Type           pgtype.Text
+	Country        pgtype.Text
+	LastSyncedAt   *time.Time
+	CreatedAt      time.Time
+}
+
 type Setting struct {
 	ID                     int16
 	PrimaryTypes           []ReleasePrimaryType
@@ -403,4 +415,13 @@ type Setting struct {
 	NextDigestAt           *time.Time
 	RssEnabled             bool
 	FeedToken              string
+}
+
+type Subscription struct {
+	ArtistMbid             uuid.UUID
+	PrimaryTypes           []ReleasePrimaryType
+	ExcludedSecondaryTypes []string
+	IncludeFeatured        pgtype.Bool
+	BaselineAt             time.Time
+	CreatedAt              time.Time
 }

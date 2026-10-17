@@ -55,10 +55,11 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
     {
       "mbid": "5b11f4ce-a62d-471e-81fc-a69a8278c7da",
       "name": "Nirvana",
+      "sort_name": "Nirvana",
       "disambiguation": "90s US grunge band",
-      "type": "Group",
-      "country": "US",
-      "life_span": { "begin": "1987", "end": "1994-04-05" },
+      "type": "Group",            // null, если неизвестно
+      "country": "US",            // null, если неизвестно
+      "life_span": { "begin": "1987", "end": "1994-04-05", "ended": true },
       "score": 100,
       "subscribed": false
     }
@@ -73,7 +74,7 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
 | Метод | Путь | Описание |
 |-------|------|----------|
 | GET | `/subscriptions?q=&limit=&offset=` | Список подписок |
-| POST | `/subscriptions` | `{mbid, include_featured?, primary_types?, excluded_secondary_types?}` → 201 (повтор → 200) |
+| POST | `/subscriptions` | `{mbid, include_featured?, primary_types?, excluded_secondary_types?}` → 201 + подписка (повтор → 200, переопределения не меняются); отсутствующее/`null` поле = глобальная настройка, `[]` — явное переопределение |
 | GET | `/subscriptions/{mbid}` | Подписка + последние релиз-группы |
 | PATCH | `/subscriptions/{mbid}` | Переопределения `{primary_types?, excluded_secondary_types?, include_featured?}`; `null` = сброс на глобальные |
 | DELETE | `/subscriptions/{mbid}` | 204 |
@@ -84,13 +85,14 @@ GET /api/v1/releases?limit=50&cursor=<opaque>
 {
   "items": [
     {
-      "artist": { "mbid": "…", "name": "Radiohead", "disambiguation": "", "country": "GB" },
+      "artist": { "mbid": "…", "name": "Radiohead", "sort_name": "Radiohead", "disambiguation": "", "type": "Group", "country": "GB" },
       "filter": {
         "primary_types":            { "value": ["album","ep"], "overridden": true },
         "excluded_secondary_types": { "value": ["Compilation","DJ-mix"], "overridden": false },
         "include_featured":         { "value": true, "overridden": true }
       },
-      "last_synced_at": "2026-10-17T06:03:12Z",
+      "last_synced_at": "2026-10-17T06:03:12Z",   // null до первой синхронизации
+      "baseline_at": "2026-09-01T10:00:00Z",
       "created_at": "2026-09-01T10:00:00Z"
     }
   ],
