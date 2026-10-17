@@ -90,3 +90,15 @@ lint: ## Run all linters
 fmt: ## Format code
 	cd $(BACKEND) && gofmt -w .
 	cd $(FRONTEND) && npm run format
+
+# ---------- release ----------
+# Release flow: manual annotated git tags pushed to GitHub, no CI, no registry.
+#
+# Usage: make release V=v0.3.0
+.PHONY: release
+release: ## Tag HEAD and push the tag to GitHub: make release V=vX.Y.Z
+	@test -n "$(V)" || (echo "usage: make release V=vX.Y.Z" >&2; exit 1)
+	@[[ "$(V)" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$$ ]] || (echo "version must look like vX.Y.Z, got $(V)" >&2; exit 1)
+	git tag -a "$(V)" -m "$(V)"
+	git push origin "$(V)"
+	@echo "Released $(V)"
