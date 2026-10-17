@@ -1,0 +1,14 @@
+# Build context is the repo root (backend/Dockerfile builds both apps)
+.git
+.env
+.env.*
+**/node_modules
+frontend/dist
+frontend/storybook-static
+frontend/coverage
+backend/bin
+backend/tmp
+**/*.test
+**/*.out
+docs
+scripts

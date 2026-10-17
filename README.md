@@ -26,7 +26,16 @@ make run-backend    # API на :8080, миграции применяются п
 make run-frontend   # UI на http://localhost:5173
 ```
 
-Весь стек в Docker: `make up` → UI на http://localhost:3000, письма — http://localhost:8025.
+Весь стек в Docker: `make up` → UI на http://localhost:8080, письма — http://localhost:8025.
+
+## Деплой в Portainer
+
+1. `make release V=v0.1.0` — тег на HEAD и пуш в GitHub.
+2. Portainer → Stacks → Add stack → **Repository**: URL репозитория, reference `refs/tags/v0.1.0`, compose path `docker-compose.yml`.
+3. Environment variables → загрузить `.env.example` и заполнить: `POSTGRES_PASSWORD`, `MB_USER_AGENT`, `PUBLIC_BASE_URL` (адрес из CNAME, например `https://music.example.com`), `VERSION`, SMTP.
+4. Deploy. приложение (UI + API) на порту `HTTP_PORT` (по умолчанию 8080), на него проксирует ваш nginx, миграции применяются при старте.
+
+Обновление: новый тег → поменять reference и `VERSION` в стеке → Pull and redeploy.
 
 Прочее: `make help` (тесты, линтеры, миграции, sqlc, Storybook).
 

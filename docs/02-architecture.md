@@ -90,7 +90,6 @@ Backend — **один бинарь** с подкомандами:
 ```
 docker-compose.yml
 ├── postgres:17
-├── backend      (tracker serve, :8080)
-├── frontend     (nginx со статикой SPA, проксирует /api и /feeds на backend)
-└── mailpit      (только dev: SMTP-ловушка + web UI)
+├── app          (tracker serve, :8080 — API, фиды и собранный SPA из STATIC_DIR)
+└── mailpit      (только dev, профиль `dev`: SMTP-ловушка + web UI)
 ```

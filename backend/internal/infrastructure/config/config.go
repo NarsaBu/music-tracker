@@ -14,11 +14,13 @@ type Config struct {
 	// MigrateOnStart applies pending migrations when `serve` starts.
 	MigrateOnStart bool   `env:"MIGRATE_ON_START" envDefault:"true"`
 	PublicBaseURL  string `env:"PUBLIC_BASE_URL" envDefault:"http://localhost:8080"`
-	Log            Log
-	MusicBrainz    MusicBrainz
-	Sync           Sync
-	SMTP           SMTP
-	Worker         Worker
+	// StaticDir is the built SPA served on non-API paths; empty = API only (dev uses Vite).
+	StaticDir   string `env:"STATIC_DIR"`
+	Log         Log
+	MusicBrainz MusicBrainz
+	Sync        Sync
+	SMTP        SMTP
+	Worker      Worker
 }
 
 type HTTP struct {

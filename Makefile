@@ -37,12 +37,14 @@ storybook: ## Run Storybook on :6006
 	cd $(FRONTEND) && npm run storybook
 
 .PHONY: up
-up: ## Build and start the whole stack (frontend on :3000)
-	docker compose up -d --build
+up: ## Build and start the whole stack with mailpit (UI on :8080)
+	@$(WITH_ENV) export SMTP_HOST=$${SMTP_HOST:-mailpit} SMTP_PORT=$${SMTP_PORT:-1025} \
+	 PUBLIC_BASE_URL=http://localhost:$${HTTP_PORT:-8080}; \
+	 docker compose --profile dev up -d --build
 
 .PHONY: down
 down: ## Stop the stack
-	docker compose down
+	docker compose --profile dev down
 
 # ---------- database ----------
 .PHONY: migrate-up
@@ -93,6 +95,8 @@ fmt: ## Format code
 
 # ---------- release ----------
 # Release flow: manual annotated git tags pushed to GitHub, no CI, no registry.
+# The Portainer stack builds images from the tagged git context
+# (see docker-compose.yml).
 #
 # Usage: make release V=v0.3.0
 .PHONY: release
@@ -101,4 +105,4 @@ release: ## Tag HEAD and push the tag to GitHub: make release V=vX.Y.Z
 	@[[ "$(V)" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$$ ]] || (echo "version must look like vX.Y.Z, got $(V)" >&2; exit 1)
 	git tag -a "$(V)" -m "$(V)"
 	git push origin "$(V)"
-	@echo "Released $(V)"
+	@echo "Pushed $(V) — in the Portainer stack set the repository reference to refs/tags/$(V), VERSION=$(V), and redeploy."

@@ -1,50 +1,87 @@
+# Deploys Music Tracker as a Portainer stack (or locally via `make up`): one
+# Postgres instance plus the app (Go service: cron sync + REST API + RSS
+# feeds + serves the built frontend — see backend/Dockerfile). No TLS and no
+# login: put it behind your HTTPS reverse proxy and set PUBLIC_BASE_URL to
+# the address users open, it is used for links in emails and feeds.
+#
+# Required env vars (set them in Portainer's stack "Environment variables",
+# or in .env next to this file for plain docker compose — see .env.example):
+# POSTGRES_PASSWORD, MB_USER_AGENT. Everything else has a working default.
+#
+# POSTGRES_PORT (default 5432) is published on the host so you can connect
+# to the database directly (psql, a GUI client); HTTP_PORT (default 8080) is
+# what the reverse proxy points at. Change either if the port is taken.
+#
+# Versioning: releases are manual git tags (semver, e.g. v0.3.0) — no CI, no
+# registry. `make release V=v0.3.0` tags and pushes; in Portainer point the
+# stack at that tag and set VERSION to it before redeploying (default "dev").
+
 services:
   postgres:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: tracker
-      POSTGRES_PASSWORD: tracker
-      POSTGRES_DB: tracker
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-tracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-tracker}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tracker -d tracker"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tracker} -d ${POSTGRES_DB:-tracker}"]
       interval: 5s
       timeout: 3s
       retries: 10
-
-  # Dev SMTP trap: web UI on http://localhost:8025
-  mailpit:
-    image: axllent/mailpit:latest
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "${POSTGRES_PORT:-5432}:5432"
 
-  backend:
-    build: ./backend
-    env_file:
-      - path: .env
-        required: false
-    environment:
-      DATABASE_URL: postgres://tracker:tracker@postgres:5432/tracker?sslmode=disable
-      # SMTP from .env; empty SMTP_HOST = the mailpit trap (nothing leaves the machine)
-      SMTP_HOST: ${SMTP_HOST:-mailpit}
-      SMTP_PORT: "${SMTP_PORT:-1025}"
-      PUBLIC_BASE_URL: http://localhost:3000
-    ports:
-      - "8080:8080"
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        VERSION: ${VERSION:-dev}
+    image: music-tracker:${VERSION:-dev}
+    # The image isn't published anywhere: without this, compose (and
+    # Portainer's "Pull and redeploy") tries to pull it from a registry first
+    # and fails with "pull access denied".
+    pull_policy: build
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      # The password goes into a URL: keep it to [A-Za-z0-9] or percent-encode it.
+      DATABASE_URL: postgres://${POSTGRES_USER:-tracker}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tracker}?sslmode=disable
+      HTTP_ADDR: :8080
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
 
-  frontend:
-    build: ./frontend
+      # MusicBrainz requires a User-Agent with contact info (email or URL).
+      MB_USER_AGENT: ${MB_USER_AGENT:?set MB_USER_AGENT}
+
+      # Cron in UTC; defaults match internal/infrastructure/config.
+      SYNC_CRON: ${SYNC_CRON:-0 6 * * *}
+      SYNC_STALE_DAYS: ${SYNC_STALE_DAYS:-90}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+
+      # Empty SMTP_HOST = email digests are not sent (the app logs a warning).
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     ports:
-      - "3000:80"
-    depends_on:
-      - backend
+      - "${HTTP_PORT:-8080}:8080"
+
+  # Dev-only SMTP trap (web UI on http://localhost:8025): not started in
+  # Portainer, `make up` / `make db` enable it.
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: [dev]
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   pgdata:

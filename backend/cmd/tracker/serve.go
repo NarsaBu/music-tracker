@@ -122,7 +122,8 @@ func serve(ctx context.Context) error {
 			Items:   importer.NewListItems(imports),
 			Resolve: importer.NewResolveItem(catalog, imports, subscribe, tx),
 		},
-		AppURL: cfg.PublicBaseURL,
+		AppURL:    cfg.PublicBaseURL,
+		StaticDir: cfg.StaticDir,
 	})
 
 	// Background work stops with ctx; serve returns only after it has finished.

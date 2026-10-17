@@ -21,6 +21,8 @@ type Deps struct {
 	Imports   ImportUseCases
 	// AppURL is the public address of the app, linked from feeds.
 	AppURL string
+	// StaticDir holds the built SPA; empty disables static serving.
+	StaticDir string
 }
 
 func NewRouter(d Deps) http.Handler {
@@ -73,6 +75,10 @@ func NewRouter(d Deps) http.Handler {
 			writeProblem(w, r, http.StatusNotFound, "Not found", "")
 		})
 	})
+
+	if d.StaticDir != "" {
+		r.NotFound(spaHandler(d.StaticDir))
+	}
 
 	return r
 }

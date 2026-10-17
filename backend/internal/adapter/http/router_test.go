@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"music-tracker/backend/internal/domain"
@@ -87,5 +89,54 @@ func TestWriteError_ValidationFields(t *testing.T) {
 	}
 	if len(p.Errors) != 1 || p.Errors[0].Field != "mbid" {
 		t.Errorf("errors = %+v, want one error for field mbid", p.Errors)
+	}
+}
+
+func TestSPA_ServesFilesAndFallsBackToIndex(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte("index"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, "assets"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "assets", "app.js"), []byte("js"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	router := NewRouter(Deps{Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Readiness: fakePinger{}, StaticDir: dir})
+
+	tests := []struct {
+		path      string
+		wantCode  int
+		wantBody  string
+		wantCache string
+	}{
+		{"/", http.StatusOK, "index", "no-cache"},
+		{"/artists/123", http.StatusOK, "index", "no-cache"},
+		{"/assets/app.js", http.StatusOK, "js", "public, max-age=31536000, immutable"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tt.path, nil))
+			if rec.Code != tt.wantCode || rec.Body.String() != tt.wantBody {
+				t.Errorf("got %d %q, want %d %q", rec.Code, rec.Body.String(), tt.wantCode, tt.wantBody)
+			}
+			if cc := rec.Header().Get("Cache-Control"); cc != tt.wantCache {
+				t.Errorf("Cache-Control = %q, want %q", cc, tt.wantCache)
+			}
+		})
+	}
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/nope", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("API 404 status = %d, want 404", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/../../etc/passwd", nil))
+	if rec.Code == http.StatusOK {
+		t.Errorf("path traversal served %q", rec.Body.String())
 	}
 }
