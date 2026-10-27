@@ -455,6 +455,12 @@ type Notification struct {
 	SentAt           *time.Time
 }
 
+type ReleaseDetail struct {
+	ReleaseGroupMbid uuid.UUID
+	Payload          []byte
+	FetchedAt        time.Time
+}
+
 type ReleaseGroup struct {
 	Mbid             uuid.UUID
 	Title            string
@@ -465,6 +471,14 @@ type ReleaseGroup struct {
 	ArtistCredit     string
 	DiscoveredAt     time.Time
 	UpdatedAt        time.Time
+	Rating           pgtype.Float8
+	RatingVotes      int32
+}
+
+type ReleaseReview struct {
+	ReleaseGroupMbid uuid.UUID
+	Payload          []byte
+	FetchedAt        time.Time
 }
 
 type Setting struct {

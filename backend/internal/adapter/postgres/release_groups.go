@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"music-tracker/backend/internal/adapter/postgres/sqlc"
@@ -52,6 +54,8 @@ func (r *ReleaseGroupRepository) UpsertMany(ctx context.Context, rgs []domain.Re
 			FirstReleaseDate: optionalText(rg.FirstRelease.Raw),
 			FirstReleaseOn:   rg.FirstRelease.Day,
 			ArtistCredit:     rg.ArtistCredit,
+			Rating:           pgtype.Float8{Float64: rg.Rating.Value, Valid: rg.Rating.Votes > 0},
+			RatingVotes:      int32(rg.Rating.Votes), //nolint:gosec // vote count
 			DiscoveredAt:     at,
 		})
 	}
@@ -105,12 +109,32 @@ func (r *ReleaseGroupRepository) ListByArtist(ctx context.Context, artist domain
 	return out, nil
 }
 
+func (r *ReleaseGroupRepository) Get(ctx context.Context, mbid domain.MBID) (domain.ReleaseGroup, error) {
+	id, err := toUUID(mbid)
+	if err != nil {
+		return domain.ReleaseGroup{}, err
+	}
+	row, err := queries(ctx, r.pool).GetReleaseGroup(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ReleaseGroup{}, fmt.Errorf("release group %s: %w", mbid, domain.ErrNotFound)
+	}
+	if err != nil {
+		return domain.ReleaseGroup{}, fmt.Errorf("get release group %s: %w", mbid, err)
+	}
+	return releaseGroupFromRow(row), nil
+}
+
 func releaseGroupFromRow(rg sqlc.ReleaseGroup) domain.ReleaseGroup {
 	var pt domain.PrimaryType
 	if rg.PrimaryType.Valid {
 		pt = domain.PrimaryType(rg.PrimaryType.ReleasePrimaryType)
 	}
+	var rating domain.Rating
+	if rg.Rating.Valid && rg.RatingVotes > 0 {
+		rating = domain.Rating{Value: rg.Rating.Float64, Votes: int(rg.RatingVotes)}
+	}
 	return domain.ReleaseGroup{
+		Rating:         rating,
 		MBID:           domain.MBID(rg.Mbid.String()),
 		Title:          rg.Title,
 		PrimaryType:    pt,

@@ -254,6 +254,16 @@ func (r *ReleaseRepo) UpsertMany(_ context.Context, rgs []domain.ReleaseGroup, _
 	return nil
 }
 
+func (r *ReleaseRepo) Get(_ context.Context, mbid domain.MBID) (domain.ReleaseGroup, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	rg, ok := r.s.Releases[mbid]
+	if !ok {
+		return domain.ReleaseGroup{}, domain.ErrNotFound
+	}
+	return rg, nil
+}
+
 func (r *ReleaseRepo) LinkMany(_ context.Context, links []domain.ArtistReleaseGroup) error {
 	r.s.mu.Lock()
 	defer r.s.mu.Unlock()

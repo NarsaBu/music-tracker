@@ -10,6 +10,9 @@ export const releaseKeys = {
   byArtist: (mbid: string) => [...releaseKeys.all, 'artist', mbid] as const,
   byArtistRole: (mbid: string, role: CreditRole | null) =>
     [...releaseKeys.byArtist(mbid), role ?? 'all'] as const,
+  one: (mbid: string) => [...releaseKeys.all, 'one', mbid] as const,
+  reviews: (mbid: string) => [...releaseKeys.all, 'reviews', mbid] as const,
+  info: (mbid: string) => [...releaseKeys.all, 'info', mbid] as const,
 };
 
 export function useArtistReleaseGroupsQuery(mbid: string, role: CreditRole | null) {
@@ -17,5 +20,29 @@ export function useArtistReleaseGroupsQuery(mbid: string, role: CreditRole | nul
     queryKey: releaseKeys.byArtistRole(mbid, role),
     queryFn: () => releaseApi.listByArtist(mbid, role),
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useReleaseQuery(mbid: string) {
+  return useQuery({ queryKey: releaseKeys.one(mbid), queryFn: () => releaseApi.get(mbid) });
+}
+
+/** Genres, tracklist and credited artists from MusicBrainz (cached on the server for a week). */
+export function useReleaseInfoQuery(mbid: string) {
+  return useQuery({
+    queryKey: releaseKeys.info(mbid),
+    queryFn: () => releaseApi.info(mbid),
+    staleTime: 60 * 60_000,
+    retry: false,
+  });
+}
+
+/** CritiqueBrainz reviews; slow upstream, cached on the server for a day. */
+export function useReviewsQuery(mbid: string) {
+  return useQuery({
+    queryKey: releaseKeys.reviews(mbid),
+    queryFn: () => releaseApi.reviews(mbid),
+    staleTime: 60 * 60_000,
+    retry: false,
   });
 }

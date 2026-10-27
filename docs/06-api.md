@@ -115,10 +115,15 @@ API открыт для всех, кто достучался до сервер�
 
 ## 6. Релизы
 
+`rating` во всех ответах с релизами — оценка сообщества MusicBrainz: `{value: 0–5, votes}` или `null`, если голосов нет. Обновляется при каждой синхронизации исполнителя.
+
 | Метод | Путь | Описание |
 |-------|------|----------|
 | GET | `/releases?limit=&cursor=&type=album&role=featured&sort=released` | Лента найденных новинок: `limit` ≤ 100 (по умолчанию 50), курсор непрозрачный и действует только для своего `sort`; `sort` — `found` (по умолчанию, по времени находки) или `released` (по дате выхода, без даты — в конце), оба от новых к старым; элемент дополнительно содержит `id` уведомления |
-| GET | `/artists/{mbid}/release-groups?role=` | Полный каталог исполнителя (из БД): новые и без даты сверху. Элемент: `mbid, title, artist_credit, credit_role, primary_type, secondary_types, first_release_date, is_baseline, is_announcement, cover_url, musicbrainz_url, discovered_at` |
+| GET | `/artists/{mbid}/release-groups?role=` | Полный каталог исполнителя (из БД): новые и без даты сверху. Элемент: `mbid, title, artist_credit, credit_role, primary_type, secondary_types, first_release_date, is_baseline, is_announcement, cover_url, musicbrainz_url, rating, discovered_at` |
+| GET | `/release-groups/{mbid}` | Релиз из картотеки для страницы релиза: `mbid, title, artist_credit, primary_type, secondary_types, first_release_date, is_announcement, cover_url, musicbrainz_url, rating`; 404 — релиза нет в базе |
+| GET | `/release-groups/{mbid}/details` | Подробности для страницы релиза из MusicBrainz: `genres` (по голосам), `edition` — издание, по которому взят треклист (самое раннее официальное; `null`, если изданий ещё нет), `media[] {position, format, title, tracks[] {number, title, length_ms, artist_credit}}`, `artists[]` и `guests[]` — `{mbid, name, subscribed}` (гости — исполнители треков, которых нет в кредите релиза). Кэш на сервере — 7 дней; если MusicBrainz не отвечает, отдаётся устаревший кэш, без кэша — 503 |
+| GET | `/release-groups/{mbid}/reviews` | Рецензии CritiqueBrainz (до 10 самых популярных): `items[] {id, author, rating (1–5 \| null), text, language, published_at, license, url}`, `total`, `average {value, votes} \| null`, `url` — все рецензии релиза. Кэш на сервере — сутки; если CritiqueBrainz не отвечает, отдаётся устаревший кэш, без кэша — 503 |
 | GET | `/artists/{mbid}/similar` | До 20 похожих исполнителей по данным ListenBrainz Labs (совместные прослушивания), самые похожие первыми. Элемент: `mbid, name, disambiguation, type, score, subscribed`; `score` относительный — сравнивать только внутри списка. Ответ кэшируется на сервере на 7 дней; если ListenBrainz не отвечает, отдаётся устаревший кэш, а без кэша — 503 |
 
 ```json

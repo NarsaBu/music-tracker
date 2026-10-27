@@ -3,6 +3,7 @@ import { ArtistCatalogPage } from '@/features/artist-catalog/ArtistCatalogPage';
 import { ArtistSearchPage } from '@/features/artist-search/ArtistSearchPage';
 import { ImportReviewPage } from '@/features/import-review/ImportReviewPage';
 import { ImportsPage } from '@/features/imports/ImportsPage';
+import { ReleasePage } from '@/features/release-page/ReleasePage';
 import { ReleasesFeedPage } from '@/features/releases-feed/ReleasesFeedPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { SubscriptionsPage } from '@/features/subscriptions/SubscriptionsPage';
@@ -17,6 +18,7 @@ export const router = createBrowserRouter([
       { path: 'artists', element: <SubscriptionsPage /> },
       { path: 'artists/add', element: <ArtistSearchPage /> },
       { path: 'artists/:mbid', element: <ArtistCatalogPage /> },
+      { path: 'releases/:mbid', element: <ReleasePage /> },
       { path: 'imports', element: <ImportsPage /> },
       { path: 'imports/:id', element: <ImportReviewPage /> },
       { path: 'settings', element: <SettingsPage /> },

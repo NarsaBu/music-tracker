@@ -195,8 +195,8 @@ func (b *LinkArtistReleaseGroupBatchResults) Close() error {
 }
 
 const upsertReleaseGroup = `-- name: UpsertReleaseGroup :batchexec
-INSERT INTO release_groups (mbid, title, primary_type, secondary_types, first_release_date, first_release_on, artist_credit, discovered_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+INSERT INTO release_groups (mbid, title, primary_type, secondary_types, first_release_date, first_release_on, artist_credit, rating, rating_votes, discovered_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
 ON CONFLICT (mbid) DO UPDATE
 SET title              = EXCLUDED.title,
     primary_type       = EXCLUDED.primary_type,
@@ -204,6 +204,8 @@ SET title              = EXCLUDED.title,
     first_release_date = EXCLUDED.first_release_date,
     first_release_on   = EXCLUDED.first_release_on,
     artist_credit      = EXCLUDED.artist_credit,
+    rating             = EXCLUDED.rating,
+    rating_votes       = EXCLUDED.rating_votes,
     updated_at         = EXCLUDED.updated_at
 `
 
@@ -221,6 +223,8 @@ type UpsertReleaseGroupParams struct {
 	FirstReleaseDate pgtype.Text
 	FirstReleaseOn   *time.Time
 	ArtistCredit     string
+	Rating           pgtype.Float8
+	RatingVotes      int32
 	DiscoveredAt     time.Time
 }
 
@@ -235,6 +239,8 @@ func (q *Queries) UpsertReleaseGroup(ctx context.Context, arg []UpsertReleaseGro
 			a.FirstReleaseDate,
 			a.FirstReleaseOn,
 			a.ArtistCredit,
+			a.Rating,
+			a.RatingVotes,
 			a.DiscoveredAt,
 		}
 		batch.Queue(upsertReleaseGroup, vals...)

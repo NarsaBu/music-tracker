@@ -10,6 +10,7 @@
             "disambiguation": "",
             "first-release-date": "1999-06",
             "title": "Ágætis byrjun",
+            "rating": {"value": 4.6, "votes-count": 40},
             "artist-credit": [
                 {
                     "joinphrase": "",
@@ -49,6 +50,7 @@
                 }
             ],
             "title": "Von",
+            "rating": {"value": null, "votes-count": 0},
             "first-release-date": "1997"
         },
         {

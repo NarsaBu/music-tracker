@@ -56,6 +56,7 @@ export function releaseGroupWire(
     is_announcement: false,
     cover_url: `https://coverartarchive.org/release-group/${mbid}/front-250`,
     musicbrainz_url: `https://musicbrainz.org/release-group/${mbid}`,
+    rating: null,
     discovered_at: '2026-10-17T06:00:00Z',
     ...extra,
   };
@@ -101,6 +102,7 @@ export function feedReleaseWire(n: number, extra: Record<string, unknown> = {}) 
     is_announcement: false,
     cover_url: `https://coverartarchive.org/release-group/${mbid}/front-250`,
     musicbrainz_url: `https://musicbrainz.org/release-group/${mbid}`,
+    rating: null,
     discovered_at: '2026-10-17T06:03:00Z',
     ...extra,
   };

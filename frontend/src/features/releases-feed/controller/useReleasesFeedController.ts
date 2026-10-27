@@ -4,6 +4,7 @@ import { useFeedQuery } from '@/entities/feed/queries';
 import {
   CREDIT_ROLES,
   formatPartialDate,
+  formatRating,
   type CreditRole,
   type PrimaryType,
 } from '@/entities/release/model';
@@ -23,7 +24,10 @@ export interface FeedRecordModel {
   date: string;
   foundText: string;
   coverUrl: string;
-  musicbrainzUrl: string;
+  /** The release page in the app: ratings and reviews. */
+  releasePath: string;
+  /** "★ 4,6 · 89"; null when unrated on MusicBrainz. */
+  ratingText: string | null;
   artistMbid: string;
   typeLabel: string | null;
   secondaryTypes: string[];
@@ -55,7 +59,8 @@ export function useReleasesFeedController() {
         ? t.feed.guest(r.foundVia.name, at(r.discoveredAt))
         : t.feed.found(at(r.discoveredAt)),
     coverUrl: r.coverUrl,
-    musicbrainzUrl: r.musicbrainzUrl,
+    releasePath: `/releases/${r.mbid}`,
+    ratingText: r.rating ? formatRating(r.rating, t.locale) : null,
     artistMbid: r.foundVia.mbid,
     typeLabel: r.primaryType ? t.release.primaryTypes[r.primaryType] : null,
     secondaryTypes: r.secondaryTypes.map((s) => t.release.secondaryTypes[s] ?? s),

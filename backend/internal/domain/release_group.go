@@ -36,6 +36,14 @@ type ReleaseGroup struct {
 	ArtistCredit string
 	// Credits is the structured credit used to compute roles; set only by the catalog.
 	Credits ArtistCredit
+	// Rating is the MusicBrainz community rating.
+	Rating Rating
+}
+
+// Rating is an average of user votes on a 0–5 scale; Votes == 0 means unrated.
+type Rating struct {
+	Value float64
+	Votes int
 }
 
 // ReleaseDate is a MusicBrainz partial date: "YYYY", "YYYY-MM", "YYYY-MM-DD" or empty.

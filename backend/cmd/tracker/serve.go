@@ -9,6 +9,7 @@ import (
 	"os"
 	"sync"
 
+	"music-tracker/backend/internal/adapter/critiquebrainz"
 	"music-tracker/backend/internal/adapter/email"
 	httpadapter "music-tracker/backend/internal/adapter/http"
 	"music-tracker/backend/internal/adapter/importfile"
@@ -24,6 +25,7 @@ import (
 	"music-tracker/backend/internal/usecase/artist"
 	"music-tracker/backend/internal/usecase/importer"
 	"music-tracker/backend/internal/usecase/notify"
+	"music-tracker/backend/internal/usecase/release"
 	settingsuc "music-tracker/backend/internal/usecase/settings"
 	syncuc "music-tracker/backend/internal/usecase/sync"
 )
@@ -118,7 +120,14 @@ func serve(ctx context.Context) error {
 			TestEmail: notify.NewSendTestEmail(settings, mailer),
 		},
 		Releases: notify.NewListReleases(notifications),
-		Feeds:    notify.NewBuildFeed(settings, notifications),
+		ReleaseGroups: httpadapter.ReleaseGroupUseCases{
+			Get: release.NewGetReleaseGroup(releases),
+			Reviews: release.NewListReviews(releases,
+				critiquebrainz.NewClient(critiquebrainz.Config{UserAgent: cfg.MusicBrainz.UserAgent}),
+				postgres.NewReviewCache(pool), clock),
+			Details: release.NewGetDetails(releases, catalog, postgres.NewReleaseDetailsCache(pool), subs, clock),
+		},
+		Feeds: notify.NewBuildFeed(settings, notifications),
 		Imports: httpadapter.ImportUseCases{
 			Create:  importer.NewCreateImport(importfile.Parser{}, imports, queue, tx, clock),
 			List:    importer.NewListImports(imports),

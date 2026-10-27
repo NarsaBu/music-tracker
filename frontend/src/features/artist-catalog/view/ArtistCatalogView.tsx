@@ -101,7 +101,7 @@ export function ArtistCatalogView({ filterPanel, similarPanel, ...vm }: ArtistCa
               title={r.title}
               subtitle={r.credit}
               coverUrl={r.coverUrl}
-              href={r.musicbrainzUrl}
+              to={r.releasePath}
               meta={r.date}
               badges={
                 <>
@@ -114,6 +114,7 @@ export function ArtistCatalogView({ filterPanel, similarPanel, ...vm }: ArtistCa
                     <TapeLabel tone="accent">{all.release.announcement}</TapeLabel>
                   )}
                   {r.fresh && <TapeLabel tone="accent">{all.release.fresh}</TapeLabel>}
+                  {r.ratingText && <TapeLabel>{r.ratingText}</TapeLabel>}
                 </>
               }
             />

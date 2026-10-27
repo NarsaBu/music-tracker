@@ -12,6 +12,61 @@ import (
 	"github.com/google/uuid"
 )
 
+const getReleaseDetails = `-- name: GetReleaseDetails :one
+SELECT payload, fetched_at FROM release_details WHERE release_group_mbid = $1
+`
+
+type GetReleaseDetailsRow struct {
+	Payload   []byte
+	FetchedAt time.Time
+}
+
+func (q *Queries) GetReleaseDetails(ctx context.Context, releaseGroupMbid uuid.UUID) (GetReleaseDetailsRow, error) {
+	row := q.db.QueryRow(ctx, getReleaseDetails, releaseGroupMbid)
+	var i GetReleaseDetailsRow
+	err := row.Scan(&i.Payload, &i.FetchedAt)
+	return i, err
+}
+
+const getReleaseGroup = `-- name: GetReleaseGroup :one
+SELECT mbid, title, primary_type, secondary_types, first_release_date, first_release_on, artist_credit, discovered_at, updated_at, rating, rating_votes FROM release_groups WHERE mbid = $1
+`
+
+func (q *Queries) GetReleaseGroup(ctx context.Context, mbid uuid.UUID) (ReleaseGroup, error) {
+	row := q.db.QueryRow(ctx, getReleaseGroup, mbid)
+	var i ReleaseGroup
+	err := row.Scan(
+		&i.Mbid,
+		&i.Title,
+		&i.PrimaryType,
+		&i.SecondaryTypes,
+		&i.FirstReleaseDate,
+		&i.FirstReleaseOn,
+		&i.ArtistCredit,
+		&i.DiscoveredAt,
+		&i.UpdatedAt,
+		&i.Rating,
+		&i.RatingVotes,
+	)
+	return i, err
+}
+
+const getReleaseReviews = `-- name: GetReleaseReviews :one
+SELECT payload, fetched_at FROM release_reviews WHERE release_group_mbid = $1
+`
+
+type GetReleaseReviewsRow struct {
+	Payload   []byte
+	FetchedAt time.Time
+}
+
+func (q *Queries) GetReleaseReviews(ctx context.Context, releaseGroupMbid uuid.UUID) (GetReleaseReviewsRow, error) {
+	row := q.db.QueryRow(ctx, getReleaseReviews, releaseGroupMbid)
+	var i GetReleaseReviewsRow
+	err := row.Scan(&i.Payload, &i.FetchedAt)
+	return i, err
+}
+
 const knownReleaseGroups = `-- name: KnownReleaseGroups :many
 SELECT release_group_mbid FROM artist_release_groups WHERE artist_mbid = $1
 `
@@ -37,7 +92,7 @@ func (q *Queries) KnownReleaseGroups(ctx context.Context, artistMbid uuid.UUID) 
 }
 
 const listArtistReleaseGroups = `-- name: ListArtistReleaseGroups :many
-SELECT rg.mbid, rg.title, rg.primary_type, rg.secondary_types, rg.first_release_date, rg.first_release_on, rg.artist_credit, rg.discovered_at, rg.updated_at, l.credit_role, l.is_baseline, l.discovered_at AS linked_at
+SELECT rg.mbid, rg.title, rg.primary_type, rg.secondary_types, rg.first_release_date, rg.first_release_on, rg.artist_credit, rg.discovered_at, rg.updated_at, rg.rating, rg.rating_votes, l.credit_role, l.is_baseline, l.discovered_at AS linked_at
 FROM artist_release_groups l
 JOIN release_groups rg ON rg.mbid = l.release_group_mbid
 WHERE l.artist_mbid = $1
@@ -77,6 +132,8 @@ func (q *Queries) ListArtistReleaseGroups(ctx context.Context, arg ListArtistRel
 			&i.ReleaseGroup.ArtistCredit,
 			&i.ReleaseGroup.DiscoveredAt,
 			&i.ReleaseGroup.UpdatedAt,
+			&i.ReleaseGroup.Rating,
+			&i.ReleaseGroup.RatingVotes,
 			&i.CreditRole,
 			&i.IsBaseline,
 			&i.LinkedAt,
@@ -89,4 +146,38 @@ func (q *Queries) ListArtistReleaseGroups(ctx context.Context, arg ListArtistRel
 		return nil, err
 	}
 	return items, nil
+}
+
+const putReleaseDetails = `-- name: PutReleaseDetails :exec
+INSERT INTO release_details (release_group_mbid, payload, fetched_at)
+VALUES ($1, $2, $3)
+ON CONFLICT (release_group_mbid) DO UPDATE SET payload = EXCLUDED.payload, fetched_at = EXCLUDED.fetched_at
+`
+
+type PutReleaseDetailsParams struct {
+	ReleaseGroupMbid uuid.UUID
+	Payload          []byte
+	FetchedAt        time.Time
+}
+
+func (q *Queries) PutReleaseDetails(ctx context.Context, arg PutReleaseDetailsParams) error {
+	_, err := q.db.Exec(ctx, putReleaseDetails, arg.ReleaseGroupMbid, arg.Payload, arg.FetchedAt)
+	return err
+}
+
+const putReleaseReviews = `-- name: PutReleaseReviews :exec
+INSERT INTO release_reviews (release_group_mbid, payload, fetched_at)
+VALUES ($1, $2, $3)
+ON CONFLICT (release_group_mbid) DO UPDATE SET payload = EXCLUDED.payload, fetched_at = EXCLUDED.fetched_at
+`
+
+type PutReleaseReviewsParams struct {
+	ReleaseGroupMbid uuid.UUID
+	Payload          []byte
+	FetchedAt        time.Time
+}
+
+func (q *Queries) PutReleaseReviews(ctx context.Context, arg PutReleaseReviewsParams) error {
+	_, err := q.db.Exec(ctx, putReleaseReviews, arg.ReleaseGroupMbid, arg.Payload, arg.FetchedAt)
+	return err
 }

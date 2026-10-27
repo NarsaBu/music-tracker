@@ -177,7 +177,21 @@ type releaseGroupDTO struct {
 	IsAnnouncement   bool                `json:"is_announcement"`
 	CoverURL         string              `json:"cover_url"`
 	MusicBrainzURL   string              `json:"musicbrainz_url"`
+	Rating           *ratingDTO          `json:"rating"`
 	DiscoveredAt     time.Time           `json:"discovered_at"`
+}
+
+// ratingDTO is a MusicBrainz community rating, 0–5; null when nobody voted.
+type ratingDTO struct {
+	Value float64 `json:"value"`
+	Votes int     `json:"votes"`
+}
+
+func toRatingDTO(r domain.Rating) *ratingDTO {
+	if r.Votes == 0 {
+		return nil
+	}
+	return &ratingDTO{Value: r.Value, Votes: r.Votes}
 }
 
 // toReleaseGroupDTO needs now to tell announcements (future dates) apart.
@@ -200,6 +214,7 @@ func toReleaseGroupDTO(now time.Time) func(domain.ArtistReleaseGroup) releaseGro
 			IsAnnouncement:   rg.FirstRelease.IsAnnouncement(now),
 			CoverURL:         rg.CoverURL(),
 			MusicBrainzURL:   rg.MusicBrainzURL(),
+			Rating:           toRatingDTO(rg.Rating),
 			DiscoveredAt:     l.DiscoveredAt,
 		}
 	}

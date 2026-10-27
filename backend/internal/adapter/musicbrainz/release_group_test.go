@@ -17,7 +17,7 @@ func TestListReleaseGroups_ReadsAllPages(t *testing.T) {
 	var offsets []string
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		if r.URL.Path != "/ws/2/release-group" || q.Get("artist") != sigurRos || q.Get("inc") != "artist-credits" {
+		if r.URL.Path != "/ws/2/release-group" || q.Get("artist") != sigurRos || q.Get("inc") != "artist-credits ratings" {
 			t.Errorf("request = %s", r.URL)
 		}
 		offsets = append(offsets, q.Get("offset"))
@@ -42,6 +42,9 @@ func TestListReleaseGroups_ReadsAllPages(t *testing.T) {
 	}
 	if first.ArtistCredit != "Sigur Rós" || len(first.Credits) != 1 || first.Credits[0].ArtistMBID != sigurRos {
 		t.Errorf("credit = %q %+v", first.ArtistCredit, first.Credits)
+	}
+	if first.Rating != (domain.Rating{Value: 4.6, Votes: 40}) || got[1].Rating != (domain.Rating{}) {
+		t.Errorf("ratings = %+v, %+v; want 4.6/40 and unrated", first.Rating, got[1].Rating)
 	}
 	if first.SecondaryTypes == nil {
 		t.Error("secondary types must be an empty slice, not nil")

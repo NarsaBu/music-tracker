@@ -19,6 +19,8 @@ type Deps struct {
 	Releases  ReleasesLister
 	Feeds     FeedBuilder
 	Imports   ImportUseCases
+	// ReleaseGroups serves the release page: rating and reviews.
+	ReleaseGroups ReleaseGroupUseCases
 	// AppURL is the public address of the app, linked from feeds.
 	AppURL string
 	// StaticDir holds the built SPA; empty disables static serving.
@@ -40,6 +42,7 @@ func NewRouter(d Deps) http.Handler {
 	sync := &syncHandler{uc: d.Sync, log: d.Logger}
 	settings := &settingsHandler{uc: d.Settings, log: d.Logger}
 	imports := &importHandler{uc: d.Imports, log: d.Logger}
+	releaseGroups := &releaseGroupHandler{uc: d.ReleaseGroups, log: d.Logger}
 	releases := &releasesHandler{list: d.Releases, feeds: d.Feeds, appURL: d.AppURL, log: d.Logger}
 
 	r.Get("/feeds/{file}", releases.serveFeed)
@@ -56,6 +59,9 @@ func NewRouter(d Deps) http.Handler {
 		})
 		r.Get("/artists/{mbid}/release-groups", artists.releaseGroups)
 		r.Get("/artists/{mbid}/similar", artists.similar)
+		r.Get("/release-groups/{mbid}", releaseGroups.get)
+		r.Get("/release-groups/{mbid}/reviews", releaseGroups.reviews)
+		r.Get("/release-groups/{mbid}/details", releaseGroups.details)
 		r.Post("/sync", sync.start)
 		r.Get("/sync/runs/latest", sync.latest)
 		r.Get("/releases", releases.listReleases)

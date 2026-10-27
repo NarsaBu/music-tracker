@@ -14,7 +14,7 @@ import (
 )
 
 const claimPendingEmail = `-- name: ClaimPendingEmail :many
-SELECT n.id, n.credit_role, n.created_at, rg.mbid, rg.title, rg.primary_type, rg.secondary_types, rg.first_release_date, rg.first_release_on, rg.artist_credit, rg.discovered_at, rg.updated_at, a.mbid, a.name, a.sort_name, a.disambiguation, a.type, a.country, a.last_synced_at, a.created_at
+SELECT n.id, n.credit_role, n.created_at, rg.mbid, rg.title, rg.primary_type, rg.secondary_types, rg.first_release_date, rg.first_release_on, rg.artist_credit, rg.discovered_at, rg.updated_at, rg.rating, rg.rating_votes, a.mbid, a.name, a.sort_name, a.disambiguation, a.type, a.country, a.last_synced_at, a.created_at
 FROM notifications n
 JOIN release_groups rg ON rg.mbid = n.release_group_mbid
 JOIN artists a ON a.mbid = n.artist_mbid
@@ -53,6 +53,8 @@ func (q *Queries) ClaimPendingEmail(ctx context.Context) ([]ClaimPendingEmailRow
 			&i.ReleaseGroup.ArtistCredit,
 			&i.ReleaseGroup.DiscoveredAt,
 			&i.ReleaseGroup.UpdatedAt,
+			&i.ReleaseGroup.Rating,
+			&i.ReleaseGroup.RatingVotes,
 			&i.Artist.Mbid,
 			&i.Artist.Name,
 			&i.Artist.SortName,
@@ -106,7 +108,7 @@ func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotification
 }
 
 const listFeed = `-- name: ListFeed :many
-SELECT n.id, n.credit_role, n.created_at, rg.mbid, rg.title, rg.primary_type, rg.secondary_types, rg.first_release_date, rg.first_release_on, rg.artist_credit, rg.discovered_at, rg.updated_at, a.mbid, a.name, a.sort_name, a.disambiguation, a.type, a.country, a.last_synced_at, a.created_at
+SELECT n.id, n.credit_role, n.created_at, rg.mbid, rg.title, rg.primary_type, rg.secondary_types, rg.first_release_date, rg.first_release_on, rg.artist_credit, rg.discovered_at, rg.updated_at, rg.rating, rg.rating_votes, a.mbid, a.name, a.sort_name, a.disambiguation, a.type, a.country, a.last_synced_at, a.created_at
 FROM notifications n
 JOIN release_groups rg ON rg.mbid = n.release_group_mbid
 JOIN artists a ON a.mbid = n.artist_mbid
@@ -163,6 +165,8 @@ func (q *Queries) ListFeed(ctx context.Context, arg ListFeedParams) ([]ListFeedR
 			&i.ReleaseGroup.ArtistCredit,
 			&i.ReleaseGroup.DiscoveredAt,
 			&i.ReleaseGroup.UpdatedAt,
+			&i.ReleaseGroup.Rating,
+			&i.ReleaseGroup.RatingVotes,
 			&i.Artist.Mbid,
 			&i.Artist.Name,
 			&i.Artist.SortName,
@@ -183,7 +187,7 @@ func (q *Queries) ListFeed(ctx context.Context, arg ListFeedParams) ([]ListFeedR
 }
 
 const listFeedByRelease = `-- name: ListFeedByRelease :many
-SELECT n.id, n.credit_role, n.created_at, rg.mbid, rg.title, rg.primary_type, rg.secondary_types, rg.first_release_date, rg.first_release_on, rg.artist_credit, rg.discovered_at, rg.updated_at, a.mbid, a.name, a.sort_name, a.disambiguation, a.type, a.country, a.last_synced_at, a.created_at
+SELECT n.id, n.credit_role, n.created_at, rg.mbid, rg.title, rg.primary_type, rg.secondary_types, rg.first_release_date, rg.first_release_on, rg.artist_credit, rg.discovered_at, rg.updated_at, rg.rating, rg.rating_votes, a.mbid, a.name, a.sort_name, a.disambiguation, a.type, a.country, a.last_synced_at, a.created_at
 FROM notifications n
 JOIN release_groups rg ON rg.mbid = n.release_group_mbid
 JOIN artists a ON a.mbid = n.artist_mbid
@@ -241,6 +245,8 @@ func (q *Queries) ListFeedByRelease(ctx context.Context, arg ListFeedByReleasePa
 			&i.ReleaseGroup.ArtistCredit,
 			&i.ReleaseGroup.DiscoveredAt,
 			&i.ReleaseGroup.UpdatedAt,
+			&i.ReleaseGroup.Rating,
+			&i.ReleaseGroup.RatingVotes,
 			&i.Artist.Mbid,
 			&i.Artist.Name,
 			&i.Artist.SortName,

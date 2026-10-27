@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Link } from 'react-router';
 import { cx } from '@/shared/lib/cx';
 import styles from './RecordSleeve.module.css';
 
@@ -14,6 +15,8 @@ export interface RecordSleeveProps {
   badges?: ReactNode;
   /** Makes the title and the cover a link (opens in a new tab). */
   href?: string;
+  /** Makes the title and the cover a link to an app route; wins over href. */
+  to?: string;
   /** Dimmed sleeve, e.g. for history that is not news. */
   muted?: boolean;
   className?: string;
@@ -27,6 +30,7 @@ export function RecordSleeve({
   meta,
   badges,
   href,
+  to,
   muted,
   className,
 }: RecordSleeveProps) {
@@ -56,7 +60,12 @@ export function RecordSleeve({
 
   return (
     <article className={cx(styles.record, muted && styles.muted, className)}>
-      {href ? (
+      {to ? (
+        // Mouse shortcut, hidden from keyboard and screen readers as below.
+        <Link className={cx(styles.sleeve, styles.sleeveLink)} to={to} tabIndex={-1} aria-hidden>
+          {sleeve}
+        </Link>
+      ) : href ? (
         // A mouse shortcut to the same page as the title link: hidden from
         // keyboard and screen readers so the link is not announced twice.
         <a
@@ -73,7 +82,9 @@ export function RecordSleeve({
         <div className={styles.sleeve}>{sleeve}</div>
       )}
       <h3 className={styles.title}>
-        {href ? (
+        {to ? (
+          <Link to={to}>{title}</Link>
+        ) : href ? (
           <a href={href} target="_blank" rel="noreferrer">
             {title}
           </a>

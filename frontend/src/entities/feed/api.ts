@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ratingSchema } from '@/entities/release/api';
 import { CREDIT_ROLES, PRIMARY_TYPES } from '@/entities/release/model';
 import type { HttpClient } from '@/shared/api';
 import type { FeedFilter, FeedPage, FeedRelease } from './model';
@@ -16,6 +17,7 @@ const releaseSchema = z
     is_announcement: z.boolean(),
     cover_url: z.string(),
     musicbrainz_url: z.string(),
+    rating: ratingSchema.nullable(),
     discovered_at: z.string(),
   })
   .transform((r): FeedRelease => ({
@@ -34,6 +36,7 @@ const releaseSchema = z
     isAnnouncement: r.is_announcement,
     coverUrl: r.cover_url,
     musicbrainzUrl: r.musicbrainz_url,
+    rating: r.rating,
     discoveredAt: r.discovered_at,
   }));
 

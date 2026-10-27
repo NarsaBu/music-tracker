@@ -1,4 +1,4 @@
-import type { CreditRole, PrimaryType } from '@/entities/release/model';
+import type { CreditRole, PrimaryType, Rating } from '@/entities/release/model';
 
 /** A found release in the feed (US-9). */
 export interface FeedRelease {
@@ -14,6 +14,7 @@ export interface FeedRelease {
   isAnnouncement: boolean;
   coverUrl: string;
   musicbrainzUrl: string;
+  rating: Rating | null;
   discoveredAt: string;
 }
 

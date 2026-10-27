@@ -4,6 +4,7 @@ import { artistTypeLabel } from '@/entities/artist/model';
 import {
   CREDIT_ROLES,
   formatPartialDate,
+  formatRating,
   PRIMARY_TYPES,
   type CreditRole,
   type PrimaryType,
@@ -32,7 +33,10 @@ export interface RecordModel {
   credit: string;
   date: string;
   coverUrl: string;
-  musicbrainzUrl: string;
+  /** The release page in the app: ratings and reviews. */
+  releasePath: string;
+  /** "★ 4,6 · 89"; null when unrated on MusicBrainz. */
+  ratingText: string | null;
   typeLabel: string | null;
   secondaryTypes: string[];
   featured: boolean;
@@ -92,7 +96,8 @@ export function useArtistCatalogController(mbid: string) {
       credit: r.artistCredit,
       date: formatPartialDate(r.firstReleaseDate, t.common),
       coverUrl: r.coverUrl,
-      musicbrainzUrl: r.musicbrainzUrl,
+      releasePath: `/releases/${r.mbid}`,
+      ratingText: r.rating ? formatRating(r.rating, t.locale) : null,
       typeLabel: r.primaryType ? t.release.primaryTypes[r.primaryType] : null,
       secondaryTypes: r.secondaryTypes.map((s) => t.release.secondaryTypes[s] ?? s),
       featured: r.creditRole === 'featured',

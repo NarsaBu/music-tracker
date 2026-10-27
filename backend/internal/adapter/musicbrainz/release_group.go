@@ -17,6 +17,10 @@ type releaseGroupDTO struct {
 	SecondaryTypes   []string    `json:"secondary-types"`
 	FirstReleaseDate string      `json:"first-release-date"`
 	ArtistCredit     []creditDTO `json:"artist-credit"`
+	Rating           struct {
+		Value      *float64 `json:"value"`
+		VotesCount int      `json:"votes-count"`
+	} `json:"rating"`
 }
 
 type creditDTO struct {
@@ -41,7 +45,8 @@ func (c *Client) ListReleaseGroups(ctx context.Context, artist domain.MBID) ([]d
 		var page releaseGroupBrowseDTO
 		q := url.Values{
 			"artist": {string(artist)},
-			"inc":    {"artist-credits"},
+			// Ratings come at no extra request, so every sync refreshes them.
+			"inc":    {"artist-credits ratings"},
 			"limit":  {strconv.Itoa(c.pageSize)},
 			"offset": {strconv.Itoa(offset)},
 		}
@@ -67,17 +72,17 @@ func (d releaseGroupDTO) toDomain() (domain.ReleaseGroup, error) {
 	if err != nil {
 		return domain.ReleaseGroup{}, fmt.Errorf("musicbrainz: release group id %q: %w", d.ID, err)
 	}
-	credits := make(domain.ArtistCredit, 0, len(d.ArtistCredit))
-	for _, c := range d.ArtistCredit {
-		// An unparsable artist id is kept empty: RoleOf then treats the artist as absent.
-		artistID, _ := domain.ParseMBID(c.Artist.ID)
-		credits = append(credits, domain.CreditName{ArtistMBID: artistID, Name: c.Name, JoinPhrase: c.JoinPhrase})
-	}
+	credits := creditsOf(d.ArtistCredit)
 	secondary := d.SecondaryTypes
 	if secondary == nil {
 		secondary = []string{}
 	}
+	var rating domain.Rating
+	if d.Rating.Value != nil && d.Rating.VotesCount > 0 {
+		rating = domain.Rating{Value: *d.Rating.Value, Votes: d.Rating.VotesCount}
+	}
 	return domain.ReleaseGroup{
+		Rating:         rating,
 		MBID:           mbid,
 		Title:          d.Title,
 		PrimaryType:    primaryType(d.PrimaryType),
@@ -86,6 +91,16 @@ func (d releaseGroupDTO) toDomain() (domain.ReleaseGroup, error) {
 		ArtistCredit:   credits.String(),
 		Credits:        credits,
 	}, nil
+}
+
+func creditsOf(dtos []creditDTO) domain.ArtistCredit {
+	credits := make(domain.ArtistCredit, 0, len(dtos))
+	for _, c := range dtos {
+		// An unparsable artist id is kept empty: RoleOf then treats the artist as absent.
+		artistID, _ := domain.ParseMBID(c.Artist.ID)
+		credits = append(credits, domain.CreditName{ArtistMBID: artistID, Name: c.Name, JoinPhrase: c.JoinPhrase})
+	}
+	return credits
 }
 
 // primaryType maps "Album", "EP", … to the stored lowercase type; an unknown one becomes "other".

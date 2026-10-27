@@ -41,6 +41,7 @@ type releaseDTO struct {
 	IsAnnouncement   bool                `json:"is_announcement"`
 	CoverURL         string              `json:"cover_url"`
 	MusicBrainzURL   string              `json:"musicbrainz_url"`
+	Rating           *ratingDTO          `json:"rating"`
 	DiscoveredAt     time.Time           `json:"discovered_at"`
 }
 
@@ -63,6 +64,7 @@ func toReleaseDTO(now time.Time) func(domain.NotificationItem) releaseDTO {
 			IsAnnouncement:   rg.FirstRelease.IsAnnouncement(now),
 			CoverURL:         rg.CoverURL(),
 			MusicBrainzURL:   rg.MusicBrainzURL(),
+			Rating:           toRatingDTO(rg.Rating),
 			DiscoveredAt:     it.CreatedAt,
 		}
 	}

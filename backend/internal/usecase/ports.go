@@ -21,6 +21,31 @@ type MusicCatalog interface {
 	ListReleaseGroups(ctx context.Context, artist domain.MBID) ([]domain.ReleaseGroup, error)
 }
 
+// ReleaseCatalog reads release page details from the music database (MusicBrainz).
+type ReleaseCatalog interface {
+	// ReleaseGroupDetails returns domain.ErrNotFound for an unknown release group.
+	ReleaseGroupDetails(ctx context.Context, rg domain.MBID) (domain.ReleaseDetails, error)
+}
+
+// ReleaseDetailsCache keeps the last answer of the release catalog per release group.
+type ReleaseDetailsCache interface {
+	// Get returns domain.ErrNotFound when nothing (usable) is cached.
+	Get(ctx context.Context, rg domain.MBID) (details domain.ReleaseDetails, fetchedAt time.Time, err error)
+	Put(ctx context.Context, rg domain.MBID, details domain.ReleaseDetails, at time.Time) error
+}
+
+// ReviewSource finds user reviews of a release group (CritiqueBrainz).
+type ReviewSource interface {
+	ReleaseGroupReviews(ctx context.Context, rg domain.MBID) (domain.Reviews, error)
+}
+
+// ReviewCache keeps the last answer of the review source per release group.
+type ReviewCache interface {
+	// Get returns domain.ErrNotFound when nothing is cached for the release group.
+	Get(ctx context.Context, rg domain.MBID) (reviews domain.Reviews, fetchedAt time.Time, err error)
+	Put(ctx context.Context, rg domain.MBID, reviews domain.Reviews, at time.Time) error
+}
+
 // SimilarArtistsSource finds artists similar to a given one (ListenBrainz).
 type SimilarArtistsSource interface {
 	// SimilarArtists returns the list most similar first; an unknown artist has none.
@@ -50,6 +75,8 @@ type ReleaseGroupRepository interface {
 	UpsertMany(ctx context.Context, rgs []domain.ReleaseGroup, at time.Time) error
 	// LinkMany ignores links that already exist.
 	LinkMany(ctx context.Context, links []domain.ArtistReleaseGroup) error
+	// Get returns domain.ErrNotFound for a release group that is not stored.
+	Get(ctx context.Context, mbid domain.MBID) (domain.ReleaseGroup, error)
 	// ListByArtist returns the artist's catalog, newest first; role "" means any role.
 	ListByArtist(ctx context.Context, artist domain.MBID, role domain.CreditRole) ([]domain.ArtistReleaseGroup, error)
 }

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { RecordSleeve } from './RecordSleeve';
 
 describe('RecordSleeve', () => {
@@ -15,6 +16,18 @@ describe('RecordSleeve', () => {
   it('links the title to an external page', () => {
     render(<RecordSleeve title="Mezzanine" href="https://musicbrainz.org/x" />);
     expect(screen.getByRole('link', { name: 'Mezzanine' })).toHaveAttribute('target', '_blank');
+  });
+
+  it('links title and cover to an app route in the same tab', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <RecordSleeve title="Mezzanine" coverUrl="https://x/cover.jpg" to="/releases/x" />
+      </MemoryRouter>,
+    );
+    const title = screen.getByRole('link', { name: 'Mezzanine' });
+    expect(title).toHaveAttribute('href', '/releases/x');
+    expect(title).not.toHaveAttribute('target');
+    expect(container.querySelector('img')!.closest('a')).toHaveAttribute('tabindex', '-1');
   });
 
   it('makes the cover a mouse-only link to the same page', () => {

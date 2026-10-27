@@ -77,7 +77,7 @@ export function ReleasesFeedView(vm: ReleasesFeedViewModel) {
               title={r.title}
               subtitle={r.credit}
               coverUrl={r.coverUrl}
-              href={r.musicbrainzUrl}
+              to={r.releasePath}
               meta={`${r.date} · ${r.foundText}`}
               badges={
                 <>
@@ -89,6 +89,7 @@ export function ReleasesFeedView(vm: ReleasesFeedViewModel) {
                   {r.announcement && (
                     <TapeLabel tone="accent">{all.release.announcement}</TapeLabel>
                   )}
+                  {r.ratingText && <TapeLabel>{r.ratingText}</TapeLabel>}
                 </>
               }
             />
