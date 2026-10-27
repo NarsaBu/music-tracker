@@ -120,6 +120,30 @@ export function formatLength(ms: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
 }
 
+/** Whether a downloadable front cover (≥ minSize on both sides) exists. */
+export type CoverInfo =
+  | {
+      available: true;
+      minSize: number;
+      width: number;
+      height: number;
+      /** MIME type, e.g. image/png. */
+      format: string;
+      sizeBytes: number | null;
+      filename: string;
+    }
+  | {
+      available: false;
+      minSize: number;
+      /** The biggest smaller cover, if there is any cover at all. */
+      largest: { width: number; height: number } | null;
+    };
+
+/** The download address of the cover the backend picks (Content-Disposition: attachment). */
+export function coverDownloadPath(mbid: string): string {
+  return `/api/v1/release-groups/${encodeURIComponent(mbid)}/cover`;
+}
+
 /** A user review from CritiqueBrainz (Creative Commons text). */
 export interface Review {
   id: string;

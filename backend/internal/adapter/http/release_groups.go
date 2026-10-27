@@ -2,8 +2,11 @@ package http
 
 import (
 	"context"
+	"io"
 	"log/slog"
+	"mime"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -22,6 +25,12 @@ type (
 	ReleaseDetailsGetter interface {
 		Execute(ctx context.Context, mbid string) (release.DetailsView, error)
 	}
+	CoverFinder interface {
+		Execute(ctx context.Context, mbid string) (release.CoverView, error)
+	}
+	CoverOpener interface {
+		Execute(ctx context.Context, mbid string) (io.ReadCloser, release.CoverView, error)
+	}
 )
 
 // ReleaseGroupUseCases back the release page.
@@ -29,6 +38,9 @@ type ReleaseGroupUseCases struct {
 	Get     ReleaseGroupGetter
 	Reviews ReviewLister
 	Details ReleaseDetailsGetter
+	// FindCover and OpenCover serve the cover download (≥ domain.CoverMinSize).
+	FindCover CoverFinder
+	OpenCover CoverOpener
 }
 
 type releaseGroupHandler struct {
@@ -203,4 +215,70 @@ func (h *releaseGroupHandler) details(w http.ResponseWriter, r *http.Request) {
 		out.Media[i] = md
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// coverDownloadTimeout replaces the server write timeout for cover requests:
+// the search probes a slow archive, originals reach tens of megabytes.
+const coverDownloadTimeout = 5 * time.Minute
+
+type coverSizeDTO struct {
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+type coverInfoDTO struct {
+	// Available: a front cover of at least min_size on both sides exists.
+	Available bool          `json:"available"`
+	MinSize   int           `json:"min_size"`
+	Width     *int          `json:"width"`
+	Height    *int          `json:"height"`
+	Format    *string       `json:"format"`
+	SizeBytes *int64        `json:"size_bytes"`
+	Filename  *string       `json:"filename"`
+	Largest   *coverSizeDTO `json:"largest"` // the biggest smaller cover, when not available
+}
+
+// GET /release-groups/{mbid}/cover/info — whether a big enough cover exists.
+func (h *releaseGroupHandler) coverInfo(w http.ResponseWriter, r *http.Request) {
+	// The search probes several images in a slow archive: past the server write timeout.
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(coverDownloadTimeout))
+	v, err := h.uc.FindCover.Execute(r.Context(), chi.URLParam(r, "mbid"))
+	if err != nil {
+		respondError(h.log, w, r, err)
+		return
+	}
+	out := coverInfoDTO{Available: v.Found, MinSize: domain.CoverMinSize}
+	if v.Found {
+		c := v.Cover
+		format := c.ContentType
+		out.Width, out.Height, out.Format, out.Filename = &c.Width, &c.Height, &format, &v.Filename
+		if c.Size > 0 {
+			out.SizeBytes = &c.Size
+		}
+	} else if v.Largest != nil {
+		out.Largest = &coverSizeDTO{Width: v.Largest.Width, Height: v.Largest.Height}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// GET /release-groups/{mbid}/cover — the original as an attachment; 404 when none is big enough.
+func (h *releaseGroupHandler) cover(w http.ResponseWriter, r *http.Request) {
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(coverDownloadTimeout))
+	body, v, err := h.uc.OpenCover.Execute(r.Context(), chi.URLParam(r, "mbid"))
+	if err != nil {
+		respondError(h.log, w, r, err)
+		return
+	}
+	defer func() { _ = body.Close() }()
+
+	w.Header().Set("Content-Type", v.Cover.ContentType)
+	// mime encodes a non-ASCII name per RFC 2231 (filename*=utf-8''...).
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": v.Filename}))
+	if v.Cover.Size > 0 {
+		w.Header().Set("Content-Length", strconv.FormatInt(v.Cover.Size, 10))
+	}
+	w.WriteHeader(http.StatusOK)
+	if _, err := io.Copy(w, body); err != nil {
+		h.log.WarnContext(r.Context(), "cover download interrupted", slog.Any("err", err))
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"sync"
 
+	"music-tracker/backend/internal/adapter/coverart"
 	"music-tracker/backend/internal/adapter/critiquebrainz"
 	"music-tracker/backend/internal/adapter/email"
 	httpadapter "music-tracker/backend/internal/adapter/http"
@@ -95,6 +96,10 @@ func serve(ctx context.Context) error {
 	subscribe := artist.NewSubscribe(catalog, artists, subs, settings, queue, tx, clock)
 	processImport := importer.NewProcessItem(catalog, imports, subscribe, tx, clock)
 
+	detailsCache := postgres.NewReleaseDetailsCache(pool)
+	coverArchive := coverart.NewClient(coverart.Config{UserAgent: cfg.MusicBrainz.UserAgent})
+	findCover := release.NewFindCover(releases, catalog, detailsCache, coverArchive, clock)
+
 	router := httpadapter.NewRouter(httpadapter.Deps{
 		Logger:    log,
 		Readiness: pool,
@@ -125,7 +130,9 @@ func serve(ctx context.Context) error {
 			Reviews: release.NewListReviews(releases,
 				critiquebrainz.NewClient(critiquebrainz.Config{UserAgent: cfg.MusicBrainz.UserAgent}),
 				postgres.NewReviewCache(pool), clock),
-			Details: release.NewGetDetails(releases, catalog, postgres.NewReleaseDetailsCache(pool), subs, clock),
+			Details:   release.NewGetDetails(releases, catalog, detailsCache, subs, clock),
+			FindCover: findCover,
+			OpenCover: release.NewOpenCover(findCover, coverArchive),
 		},
 		Feeds: notify.NewBuildFeed(settings, notifications),
 		Imports: httpadapter.ImportUseCases{

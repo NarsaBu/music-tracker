@@ -1,8 +1,11 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { createWrapper } from '@/test/queryWrapper';
 import { server } from '@/test/server';
+import { startDownload } from '@/shared/lib/download';
 import { useReleasePageController } from './useReleasePageController';
+
+vi.mock('@/shared/lib/download', () => ({ startDownload: vi.fn() }));
 
 const OKC = 'b1392450-e666-3926-a536-22c65f834433';
 
@@ -171,5 +174,50 @@ describe('useReleasePageController', () => {
     const { result } = renderController();
     await waitFor(() => expect(result.current.notFound).toBe(true));
     expect(result.current.loadFailed).toBe(false);
+  });
+
+  it('downloads a big enough cover and explains when there is none', async () => {
+    let info: Record<string, unknown> = {
+      available: true,
+      min_size: 1200,
+      width: 4000,
+      height: 4000,
+      format: 'image/png',
+      size_bytes: 13884497,
+      filename: 'Radiohead - OK Computer.png',
+      largest: null,
+    };
+    server.use(
+      http.get(`/api/v1/release-groups/${OKC}`, () => HttpResponse.json(detail)),
+      http.get(`/api/v1/release-groups/${OKC}/cover/info`, () => HttpResponse.json(info)),
+    );
+    const { result } = renderController();
+    await waitFor(() => expect(result.current.title).toBe('OK Computer'));
+
+    act(() => result.current.onDownloadCover());
+    await waitFor(() =>
+      expect(result.current.coverText).toBe('Скачивается: 4000×4000 · PNG · 13,2 MB'),
+    );
+    expect(startDownload).toHaveBeenCalledWith(
+      `/api/v1/release-groups/${OKC}/cover`,
+      'Radiohead - OK Computer.png',
+    );
+
+    vi.mocked(startDownload).mockClear();
+    info = {
+      available: false,
+      min_size: 1200,
+      width: null,
+      height: null,
+      format: null,
+      size_bytes: null,
+      filename: null,
+      largest: { width: 500, height: 500 },
+    };
+    act(() => result.current.onDownloadCover());
+    await waitFor(() =>
+      expect(result.current.coverText).toBe('Обложки от 1200×1200 нет: самая большая — 500×500.'),
+    );
+    expect(startDownload).not.toHaveBeenCalled();
   });
 });

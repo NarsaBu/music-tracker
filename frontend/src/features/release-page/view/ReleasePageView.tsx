@@ -74,7 +74,24 @@ export function ReleasePageView(vm: ReleasePageViewModel) {
     <div className={styles.layout}>
       <Panel title={vm.title}>
         <div className={styles.head}>
-          <RecordSleeve className={styles.cover} title={vm.title} coverUrl={vm.coverUrl} />
+          <div className={styles.coverColumn}>
+            <RecordSleeve className={styles.cover} title={vm.title} coverUrl={vm.coverUrl} />
+            <PushButton
+              led={vm.coverSearching}
+              disabled={vm.coverSearching}
+              onClick={vm.onDownloadCover}
+            >
+              {t.downloadCover(1200)}
+            </PushButton>
+            {(vm.coverSearching || vm.coverText) && (
+              <p
+                className={vm.coverFailed ? styles.error : styles.note}
+                role={vm.coverFailed ? 'alert' : 'status'}
+              >
+                {vm.coverSearching ? t.searchingCover : vm.coverText}
+              </p>
+            )}
+          </div>
           <div className={styles.info}>
             <p className={styles.credit}>{vm.credit}</p>
             <p className={styles.details}>

@@ -1,15 +1,22 @@
 import { useNavigate } from 'react-router';
 import {
   artistLink,
+  coverDownloadPath,
   formatLength,
   formatPartialDate,
   ratingSearchLinks,
   type CreditedArtist,
   type Rating,
 } from '@/entities/release/model';
-import { useReleaseInfoQuery, useReleaseQuery, useReviewsQuery } from '@/entities/release/queries';
+import {
+  useCoverInfoMutation,
+  useReleaseInfoQuery,
+  useReleaseQuery,
+  useReviewsQuery,
+} from '@/entities/release/queries';
 import { ApiError } from '@/shared/api';
 import { useI18n } from '@/shared/i18n';
+import { startDownload } from '@/shared/lib/download';
 
 export interface ScoreModel {
   /** "4,6 / 5"; null when there are no votes. */
@@ -61,6 +68,7 @@ export function useReleasePageController(mbid: string) {
   const release = useReleaseQuery(mbid);
   const reviews = useReviewsQuery(mbid);
   const info = useReleaseInfoQuery(mbid);
+  const cover = useCoverInfoMutation();
 
   const number = new Intl.NumberFormat(all.locale, {
     minimumFractionDigits: 1,
@@ -124,6 +132,33 @@ export function useReleasePageController(mbid: string) {
         : t.infoFailed;
   }
 
+  const megabytes = new Intl.NumberFormat(all.locale, { maximumFractionDigits: 1 });
+  let coverText: string | undefined;
+  let coverFailed = false;
+  if (cover.data?.available) {
+    const c = cover.data;
+    coverText = t.coverStarted(
+      [
+        `${c.width}×${c.height}`,
+        c.format.replace('image/', '').toUpperCase(),
+        c.sizeBytes ? `${megabytes.format(c.sizeBytes / 1024 / 1024)} MB` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    );
+  } else if (cover.data) {
+    const { largest, minSize } = cover.data;
+    coverText = largest
+      ? t.coverTooSmall(minSize, `${largest.width}×${largest.height}`)
+      : t.noCover;
+  } else if (cover.isError) {
+    coverFailed = true;
+    coverText =
+      cover.error instanceof ApiError && cover.error.status === 503
+        ? t.coverUnavailable
+        : t.coverFailed;
+  }
+
   let reviewsError: string | undefined;
   if (reviews.isError) {
     reviewsError =
@@ -183,6 +218,16 @@ export function useReleasePageController(mbid: string) {
 
     onRetryReviews: () => void reviews.refetch(),
     onRetryInfo: () => void info.refetch(),
+
+    coverSearching: cover.isPending,
+    coverText,
+    coverFailed,
+    onDownloadCover: () =>
+      cover.mutate(mbid, {
+        onSuccess: (c) => {
+          if (c.available) startDownload(coverDownloadPath(mbid), c.filename);
+        },
+      }),
     onBack: () => void navigate(-1),
   };
 }

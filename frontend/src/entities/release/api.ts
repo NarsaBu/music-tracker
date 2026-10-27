@@ -4,6 +4,7 @@ import {
   CREDIT_ROLES,
   PRIMARY_TYPES,
   type CreditRole,
+  type CoverInfo,
   type ReleaseDetail,
   type ReleaseGroup,
   type ReleaseInfo,
@@ -128,6 +129,32 @@ const infoSchema = z
     guests: r.guests,
   }));
 
+const coverInfoSchema = z
+  .object({
+    available: z.boolean(),
+    min_size: z.number().int(),
+    width: z.number().int().nullable(),
+    height: z.number().int().nullable(),
+    format: z.string().nullable(),
+    size_bytes: z.number().nullable(),
+    filename: z.string().nullable(),
+    largest: z.object({ width: z.number().int(), height: z.number().int() }).nullable(),
+  })
+  .transform((r): CoverInfo => {
+    if (r.available && r.width && r.height && r.format && r.filename) {
+      return {
+        available: true,
+        minSize: r.min_size,
+        width: r.width,
+        height: r.height,
+        format: r.format,
+        sizeBytes: r.size_bytes,
+        filename: r.filename,
+      };
+    }
+    return { available: false, minSize: r.min_size, largest: r.largest };
+  });
+
 const reviewsSchema = z
   .object({
     items: z.array(
@@ -164,6 +191,8 @@ export function createReleaseApi(http: HttpClient) {
     },
     get: (mbid: string): Promise<ReleaseDetail> =>
       http.get(`/api/v1/release-groups/${encodeURIComponent(mbid)}`, detailSchema),
+    coverInfo: (mbid: string): Promise<CoverInfo> =>
+      http.get(`/api/v1/release-groups/${encodeURIComponent(mbid)}/cover/info`, coverInfoSchema),
     info: (mbid: string): Promise<ReleaseInfo> =>
       http.get(`/api/v1/release-groups/${encodeURIComponent(mbid)}/details`, infoSchema),
     reviews: (mbid: string): Promise<Reviews> =>

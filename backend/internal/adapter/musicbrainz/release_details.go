@@ -72,10 +72,11 @@ func (c *Client) ReleaseGroupDetails(ctx context.Context, rg domain.MBID) (domai
 			MBID: id, Title: r.Title, Status: r.Status, Country: r.Country, Date: domain.ParseReleaseDate(r.Date),
 		})
 	}
-	edition, ok := domain.PickEdition(editions)
-	if !ok {
+	out.Editions = domain.SortEditions(editions)
+	if len(out.Editions) == 0 {
 		return out, nil // an announcement may have no release yet
 	}
+	edition := out.Editions[0]
 	out.Edition = edition
 
 	var release releaseLookupDTO

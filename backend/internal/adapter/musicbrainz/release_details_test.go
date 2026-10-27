@@ -63,6 +63,9 @@ func TestReleaseGroupDetails_TracklistOfEarliestEdition(t *testing.T) {
 	if !slices.Equal(got.Genres, []string{"cloud rap", "hip hop"}) {
 		t.Errorf("genres = %v, want most voted first", got.Genres)
 	}
+	if len(got.Editions) != 2 || got.Editions[1].MBID != deluxe {
+		t.Errorf("editions = %+v, want the original then the deluxe one", got.Editions)
+	}
 	if got.Edition.MBID != original || got.Edition.Country != "US" {
 		t.Errorf("edition = %+v", got.Edition)
 	}

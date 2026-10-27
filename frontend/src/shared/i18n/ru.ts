@@ -240,6 +240,14 @@ export const ru = {
     disc: (n: number) => `Диск ${n}`,
     totalLength: (n: number, length: string) => `Треков: ${n} · ${length}`,
     externalArtist: 'Нет в картотеке — откроется MusicBrainz',
+    downloadCover: (min: number) => `Скачать обложку от ${min}×${min}`,
+    searchingCover: 'Ищу обложку…',
+    coverStarted: (size: string) => `Скачивается: ${size}`,
+    coverTooSmall: (min: number, largest: string) =>
+      `Обложки от ${min}×${min} нет: самая большая — ${largest}.`,
+    noCover: 'Обложки этого релиза нет в Cover Art Archive.',
+    coverFailed: 'Не удалось найти обложку',
+    coverUnavailable: 'Cover Art Archive не отвечает, попробуйте позже',
   },
 
   similar: {

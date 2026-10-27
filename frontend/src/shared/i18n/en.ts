@@ -240,6 +240,14 @@ export const en: Messages = {
     disc: (n: number) => `Disc ${n}`,
     totalLength: (n: number, length: string) => `Tracks: ${n} · ${length}`,
     externalArtist: 'Not in the catalogue — opens MusicBrainz',
+    downloadCover: (min: number) => `Download cover, ${min}×${min} or larger`,
+    searchingCover: 'Looking for the cover…',
+    coverStarted: (size: string) => `Downloading: ${size}`,
+    coverTooSmall: (min: number, largest: string) =>
+      `No cover of ${min}×${min} or larger: the biggest is ${largest}.`,
+    noCover: 'The Cover Art Archive has no cover for this release.',
+    coverFailed: 'Could not find the cover',
+    coverUnavailable: 'The Cover Art Archive is not responding, try again later',
   },
 
   similar: {

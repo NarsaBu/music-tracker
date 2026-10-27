@@ -10,6 +10,12 @@
   align-items: start;
 }
 
+.coverColumn {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
 .cover {
   width: 100%;
 }

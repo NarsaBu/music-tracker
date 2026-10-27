@@ -34,6 +34,18 @@ type ReleaseDetailsCache interface {
 	Put(ctx context.Context, rg domain.MBID, details domain.ReleaseDetails, at time.Time) error
 }
 
+// CoverArchive serves original cover images (Cover Art Archive).
+type CoverArchive interface {
+	// ReleaseGroupFront and ReleaseFront return the original front image URL,
+	// domain.ErrNotFound when there is none.
+	ReleaseGroupFront(ctx context.Context, rg domain.MBID) (string, error)
+	ReleaseFront(ctx context.Context, release domain.MBID) (string, error)
+	// Probe reads only the start of an image to learn its size and type.
+	Probe(ctx context.Context, url string) (domain.CoverImage, error)
+	// Open starts the download; the caller closes the body.
+	Open(ctx context.Context, url string) (io.ReadCloser, error)
+}
+
 // ReviewSource finds user reviews of a release group (CritiqueBrainz).
 type ReviewSource interface {
 	ReleaseGroupReviews(ctx context.Context, rg domain.MBID) (domain.Reviews, error)

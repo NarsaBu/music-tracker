@@ -5,8 +5,11 @@
   color: var(--text-on-plastic);
 }
 
+/* The sleeve leaves room on its right for the disc to slide into: a disc that
+   left the record's box covered the neighbour's tape labels and nearby text. */
 .sleeve {
   position: relative;
+  width: 80%;
   aspect-ratio: 1;
   margin-bottom: var(--space-2);
 }
@@ -29,16 +32,10 @@
   transition: transform var(--dur-med) var(--ease-mech);
 }
 
+/* 3% inset + 94% disc + 24% slide = 121% of the sleeve, under 125% (the record's width) */
 .record:hover .disc,
 .record:focus-within .disc {
-  transform: translateX(30%) rotate(30deg);
-}
-
-/* lift the hovered record above its right neighbour so the disc is not covered */
-.record:hover,
-.record:focus-within {
-  position: relative;
-  z-index: 1;
+  transform: translateX(24%) rotate(30deg);
 }
 
 .cover,

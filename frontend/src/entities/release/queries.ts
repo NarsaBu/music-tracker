@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { httpClient } from '@/shared/api';
 import { createReleaseApi } from './api';
 import type { CreditRole } from './model';
@@ -35,6 +35,11 @@ export function useReleaseInfoQuery(mbid: string) {
     staleTime: 60 * 60_000,
     retry: false,
   });
+}
+
+/** Looks for a cover big enough to download; on demand, it costs archive requests. */
+export function useCoverInfoMutation() {
+  return useMutation({ mutationFn: (mbid: string) => releaseApi.coverInfo(mbid) });
 }
 
 /** CritiqueBrainz reviews; slow upstream, cached on the server for a day. */

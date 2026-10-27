@@ -62,6 +62,8 @@ func NewRouter(d Deps) http.Handler {
 		r.Get("/release-groups/{mbid}", releaseGroups.get)
 		r.Get("/release-groups/{mbid}/reviews", releaseGroups.reviews)
 		r.Get("/release-groups/{mbid}/details", releaseGroups.details)
+		r.Get("/release-groups/{mbid}/cover", releaseGroups.cover)
+		r.Get("/release-groups/{mbid}/cover/info", releaseGroups.coverInfo)
 		r.Post("/sync", sync.start)
 		r.Get("/sync/runs/latest", sync.latest)
 		r.Get("/releases", releases.listReleases)

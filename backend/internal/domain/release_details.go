@@ -14,7 +14,9 @@ type ReleaseDetails struct {
 	Genres []string
 	// Edition is the release the tracklist comes from (PickEdition).
 	Edition Edition
-	Media   []Medium
+	// Editions are all known editions, best first (SortEditions).
+	Editions []Edition
+	Media    []Medium
 	// Artists are credited on the release group itself.
 	Artists []CreditName
 	// Guests are credited on tracks but not on the release group: featurings.
@@ -53,6 +55,12 @@ func PickEdition(editions []Edition) (Edition, bool) {
 	if len(editions) == 0 {
 		return Edition{}, false
 	}
+	return SortEditions(editions)[0], true
+}
+
+// SortEditions orders editions as PickEdition prefers them: official first, then
+// by date; it returns a sorted copy.
+func SortEditions(editions []Edition) []Edition {
 	sorted := slices.Clone(editions)
 	slices.SortStableFunc(sorted, func(a, b Edition) int {
 		if ao, bo := a.Status == "Official", b.Status == "Official"; ao != bo {
@@ -63,7 +71,7 @@ func PickEdition(editions []Edition) (Edition, bool) {
 		}
 		return compareEditionDates(a.Date, b.Date)
 	})
-	return sorted[0], true
+	return sorted
 }
 
 // compareEditionDates orders partial dates part by part. A missing part is not
