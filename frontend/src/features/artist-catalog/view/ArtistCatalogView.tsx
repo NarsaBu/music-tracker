@@ -18,9 +18,11 @@ import styles from './ArtistCatalogView.module.css';
 export interface ArtistCatalogViewProps extends ArtistCatalogViewModel {
   /** Slot under the header, e.g. the subscription filter editor. */
   filterPanel?: ReactNode;
+  /** Slot above the catalog, e.g. similar artists. */
+  similarPanel?: ReactNode;
 }
 
-export function ArtistCatalogView({ filterPanel, ...vm }: ArtistCatalogViewProps) {
+export function ArtistCatalogView({ filterPanel, similarPanel, ...vm }: ArtistCatalogViewProps) {
   const { t: all } = useI18n();
   const t = all.catalog;
   if (vm.notSubscribed) {
@@ -82,6 +84,8 @@ export function ArtistCatalogView({ filterPanel, ...vm }: ArtistCatalogViewProps
       </Panel>
 
       {filterPanel}
+
+      {similarPanel}
 
       {!vm.recordsLoading && vm.records.length === 0 && (
         <p className={styles.note}>

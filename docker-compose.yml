@@ -61,6 +61,9 @@ services:
       # through a proxy, http://, https:// or socks5:// URL. Empty = direct.
       HTTPS_PROXY: ${HTTPS_PROXY:-}
       NO_PROXY: ${NO_PROXY:-}
+      # Similar artists; the proxy above applies to it too.
+      LB_BASE_URL: ${LB_BASE_URL:-https://labs.api.listenbrainz.org}
+      LB_SIMILAR_ALGORITHM: ${LB_SIMILAR_ALGORITHM:-}
 
       # Cron in UTC; defaults match internal/infrastructure/config.
       SYNC_CRON: ${SYNC_CRON:-0 6 * * *}

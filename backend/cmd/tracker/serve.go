@@ -12,6 +12,7 @@ import (
 	"music-tracker/backend/internal/adapter/email"
 	httpadapter "music-tracker/backend/internal/adapter/http"
 	"music-tracker/backend/internal/adapter/importfile"
+	"music-tracker/backend/internal/adapter/listenbrainz"
 	"music-tracker/backend/internal/adapter/musicbrainz"
 	"music-tracker/backend/internal/adapter/postgres"
 	"music-tracker/backend/internal/domain"
@@ -56,6 +57,11 @@ func serve(ctx context.Context) error {
 		UserAgent: cfg.MusicBrainz.UserAgent,
 		RateLimit: cfg.MusicBrainz.RateLimit,
 	})
+	similarSource := listenbrainz.NewClient(listenbrainz.Config{
+		BaseURL:   cfg.ListenBrainz.BaseURL,
+		Algorithm: cfg.ListenBrainz.SimilarAlgorithm,
+		UserAgent: cfg.MusicBrainz.UserAgent,
+	})
 	tx := postgres.NewTxManager(pool)
 	artists := postgres.NewArtistRepository(pool)
 	subs := postgres.NewSubscriptionRepository(pool)
@@ -99,6 +105,7 @@ func serve(ctx context.Context) error {
 			Sync:          syncuc.NewRequestArtist(subs, queue, clock),
 			ReleaseGroups: artist.NewListReleaseGroups(artists, releases),
 			Update:        artist.NewUpdateSubscription(subs, settings),
+			Similar:       artist.NewListSimilar(similarSource, postgres.NewSimilarArtistsCache(pool), subs, clock),
 		},
 		Sync: httpadapter.SyncUseCases{
 			Start:  scheduleRun,

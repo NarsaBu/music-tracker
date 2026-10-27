@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { artistKeys } from '@/entities/artist/queries';
-import type { ArtistCandidate } from '@/entities/artist/model';
+import type { ArtistCandidate, SimilarArtist } from '@/entities/artist/model';
 import { httpClient } from '@/shared/api';
 import { createSubscriptionApi } from './api';
 import type { FilterPatch, SubscribeRequest, SubscriptionListParams } from './model';
@@ -53,14 +53,15 @@ export function useSubscriptionsQuery(params: SubscriptionListParams) {
 }
 
 /**
- * Marks the artist in every cached search result instead of refetching:
- * a new search would cost a MusicBrainz request (1 rps).
+ * Marks the artist in every cached artist list (search results, similar artists)
+ * instead of refetching: a new search would cost a MusicBrainz request (1 rps).
  */
 function useMarkSubscribed() {
   const queryClient = useQueryClient();
   return (mbid: string, subscribed: boolean) =>
-    queryClient.setQueriesData<ArtistCandidate[]>({ queryKey: artistKeys.all }, (items) =>
-      items?.map((a) => (a.mbid === mbid ? { ...a, subscribed } : a)),
+    queryClient.setQueriesData<Array<ArtistCandidate | SimilarArtist>>(
+      { queryKey: artistKeys.all },
+      (items) => items?.map((a) => (a.mbid === mbid ? { ...a, subscribed } : a)),
     );
 }
 

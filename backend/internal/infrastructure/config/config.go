@@ -15,12 +15,13 @@ type Config struct {
 	MigrateOnStart bool   `env:"MIGRATE_ON_START" envDefault:"true"`
 	PublicBaseURL  string `env:"PUBLIC_BASE_URL" envDefault:"http://localhost:8080"`
 	// StaticDir is the built SPA served on non-API paths; empty = API only (dev uses Vite).
-	StaticDir   string `env:"STATIC_DIR"`
-	Log         Log
-	MusicBrainz MusicBrainz
-	Sync        Sync
-	SMTP        SMTP
-	Worker      Worker
+	StaticDir    string `env:"STATIC_DIR"`
+	Log          Log
+	MusicBrainz  MusicBrainz
+	ListenBrainz ListenBrainz
+	Sync         Sync
+	SMTP         SMTP
+	Worker       Worker
 }
 
 type HTTP struct {
@@ -39,6 +40,13 @@ type MusicBrainz struct {
 	BaseURL   string  `env:"MB_BASE_URL" envDefault:"https://musicbrainz.org/ws/2"`
 	UserAgent string  `env:"MB_USER_AGENT,required,notEmpty"`
 	RateLimit float64 `env:"MB_RATE_LIMIT" envDefault:"1"`
+}
+
+// ListenBrainz Labs serves similar artists; the User-Agent is MusicBrainz's.
+type ListenBrainz struct {
+	BaseURL string `env:"LB_BASE_URL" envDefault:"https://labs.api.listenbrainz.org"`
+	// SimilarAlgorithm names the dataset; empty = the client default. Labs renames them over time.
+	SimilarAlgorithm string `env:"LB_SIMILAR_ALGORITHM"`
 }
 
 type Sync struct {

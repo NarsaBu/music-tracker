@@ -39,6 +39,9 @@ type (
 	SubscriptionUpdater interface {
 		Execute(ctx context.Context, in artist.UpdateSubscriptionInput) (artist.SubscriptionView, error)
 	}
+	SimilarArtistLister interface {
+		Execute(ctx context.Context, mbid string) ([]artist.Similar, error)
+	}
 )
 
 // ArtistUseCases groups the catalog search, subscription and artist catalog operations.
@@ -51,6 +54,7 @@ type ArtistUseCases struct {
 	Sync          SubscriptionSyncer
 	ReleaseGroups ReleaseGroupLister
 	Update        SubscriptionUpdater
+	Similar       SimilarArtistLister
 }
 
 type artistHandler struct {
@@ -160,6 +164,16 @@ func (h *artistHandler) releaseGroups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, itemsDTO[releaseGroupDTO]{Items: mapSlice(items, toReleaseGroupDTO(time.Now().UTC()))})
+}
+
+// GET /artists/{mbid}/similar — from ListenBrainz, 503 when it is down and nothing is cached.
+func (h *artistHandler) similar(w http.ResponseWriter, r *http.Request) {
+	items, err := h.uc.Similar.Execute(r.Context(), chi.URLParam(r, "mbid"))
+	if err != nil {
+		respondError(h.log, w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, itemsDTO[similarArtistDTO]{Items: mapSlice(items, toSimilarArtistDTO)})
 }
 
 // optional distinguishes an absent JSON field (set = false) from null (set, nil value).

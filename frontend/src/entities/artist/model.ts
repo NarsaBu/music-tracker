@@ -26,6 +26,17 @@ export interface ArtistCandidate extends Artist {
   subscribed: boolean;
 }
 
+/** An artist listened to together with another one (ListenBrainz). */
+export interface SimilarArtist {
+  mbid: string;
+  name: string;
+  disambiguation: string;
+  type: string | null;
+  /** Relative: compare only within one list. */
+  score: number;
+  subscribed: boolean;
+}
+
 /** "1987–1994", "1994–", "?–1994" or "" — years only, enough to tell namesakes apart. */
 export function formatLifeSpan({ begin, end, ended }: LifeSpan): string {
   const from = begin?.slice(0, 4) ?? '';

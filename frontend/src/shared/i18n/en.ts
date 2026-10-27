@@ -198,6 +198,21 @@ export const en: Messages = {
     guestReleases: 'Guest releases',
   },
 
+  similar: {
+    title: 'Similar artists',
+    source: 'ListenBrainz',
+    list: 'Similar artists',
+    loading: 'Looking for similar artists…',
+    empty: 'ListenBrainz knows no similar artists yet: too few listens.',
+    loadFailed: 'Could not load similar artists',
+    unavailable: 'ListenBrainz is not responding, try again later',
+    retry: 'Retry',
+    subscribe: 'Subscribe',
+    subscribed: 'In the catalogue',
+    subscribeTo: (name: string) => `Subscribe to ${name}`,
+    subscribeFailed: 'Could not subscribe',
+  },
+
   settings: {
     title: 'Settings',
     loading: 'Loading status',

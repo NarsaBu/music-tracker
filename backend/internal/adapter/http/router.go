@@ -55,6 +55,7 @@ func NewRouter(d Deps) http.Handler {
 			r.Post("/{mbid}/sync", artists.sync)
 		})
 		r.Get("/artists/{mbid}/release-groups", artists.releaseGroups)
+		r.Get("/artists/{mbid}/similar", artists.similar)
 		r.Post("/sync", sync.start)
 		r.Get("/sync/runs/latest", sync.latest)
 		r.Get("/releases", releases.listReleases)

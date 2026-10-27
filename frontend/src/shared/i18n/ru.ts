@@ -198,6 +198,21 @@ export const ru = {
     guestReleases: 'Гостевые релизы',
   },
 
+  similar: {
+    title: 'Похожие исполнители',
+    source: 'ListenBrainz',
+    list: 'Похожие исполнители',
+    loading: 'Ищу похожих…',
+    empty: 'ListenBrainz пока не знает похожих: у исполнителя мало прослушиваний.',
+    loadFailed: 'Не удалось загрузить похожих исполнителей',
+    unavailable: 'ListenBrainz не отвечает, попробуйте позже',
+    retry: 'Повторить',
+    subscribe: 'Подписаться',
+    subscribed: 'В картотеке',
+    subscribeTo: (name: string) => `Подписаться на ${name}`,
+    subscribeFailed: 'Не удалось подписаться',
+  },
+
   settings: {
     title: 'Настройки',
     loading: 'Состояние загрузки',

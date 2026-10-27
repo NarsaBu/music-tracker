@@ -139,6 +139,8 @@ type SyncArtist struct {
 | `MB_BASE_URL` | `https://musicbrainz.org/ws/2` | API MusicBrainz |
 | `MB_USER_AGENT` | — | Напр. `MusicTracker/0.1 ( you@example.com )` — **обязательно** |
 | `MB_RATE_LIMIT` | `1` | Запросов в секунду |
+| `LB_BASE_URL` | `https://labs.api.listenbrainz.org` | ListenBrainz Labs: похожие исполнители (User-Agent берётся из `MB_USER_AGENT`) |
+| `LB_SIMILAR_ALGORITHM` | — | Набор данных похожих исполнителей; пусто = встроенный по умолчанию. Если Labs переименует наборы и похожие перестанут грузиться — укажите актуальное имя со страницы `/similar-artists` |
 | `SYNC_CRON` | `0 6 * * *` | Расписание ежедневной синхронизации (UTC) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | — | Почта (адрес получателя и расписание дайджеста — в настройках UI) |
 | `WORKER_CONCURRENCY` | `4` | Воркеры очереди (синк всё равно ограничен rate limiter-ом) |

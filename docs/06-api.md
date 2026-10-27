@@ -119,6 +119,7 @@ API открыт для всех, кто достучался до сервер�
 |-------|------|----------|
 | GET | `/releases?limit=&cursor=&type=album&role=featured&sort=released` | Лента найденных новинок: `limit` ≤ 100 (по умолчанию 50), курсор непрозрачный и действует только для своего `sort`; `sort` — `found` (по умолчанию, по времени находки) или `released` (по дате выхода, без даты — в конце), оба от новых к старым; элемент дополнительно содержит `id` уведомления |
 | GET | `/artists/{mbid}/release-groups?role=` | Полный каталог исполнителя (из БД): новые и без даты сверху. Элемент: `mbid, title, artist_credit, credit_role, primary_type, secondary_types, first_release_date, is_baseline, is_announcement, cover_url, musicbrainz_url, discovered_at` |
+| GET | `/artists/{mbid}/similar` | До 20 похожих исполнителей по данным ListenBrainz Labs (совместные прослушивания), самые похожие первыми. Элемент: `mbid, name, disambiguation, type, score, subscribed`; `score` относительный — сравнивать только внутри списка. Ответ кэшируется на сервере на 7 дней; если ListenBrainz не отвечает, отдаётся устаревший кэш, а без кэша — 503 |
 
 ```json
 {

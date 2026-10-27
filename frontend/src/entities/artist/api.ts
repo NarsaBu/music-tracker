@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { HttpClient } from '@/shared/api';
-import type { ArtistCandidate } from './model';
+import type { ArtistCandidate, SimilarArtist } from './model';
 
 export const artistSchema = z
   .object({
@@ -37,11 +37,29 @@ const candidateSchema = z
 
 const searchResponseSchema = z.object({ items: z.array(candidateSchema) });
 
+const similarSchema = z.object({
+  mbid: z.string(),
+  name: z.string(),
+  disambiguation: z.string(),
+  type: z.string().nullable(),
+  score: z.number(),
+  subscribed: z.boolean(),
+}) satisfies z.ZodType<SimilarArtist>;
+
+const similarResponseSchema = z.object({ items: z.array(similarSchema) });
+
 export function createArtistApi(http: HttpClient) {
   return {
     search: async (query: string, limit = 10): Promise<ArtistCandidate[]> => {
       const params = new URLSearchParams({ q: query, limit: String(limit) });
       const res = await http.get(`/api/v1/catalog/artists?${params}`, searchResponseSchema);
+      return res.items;
+    },
+    similar: async (mbid: string): Promise<SimilarArtist[]> => {
+      const res = await http.get(
+        `/api/v1/artists/${encodeURIComponent(mbid)}/similar`,
+        similarResponseSchema,
+      );
       return res.items;
     },
   };

@@ -32,6 +32,26 @@ type candidateDTO struct {
 	Subscribed bool        `json:"subscribed"`
 }
 
+type similarArtistDTO struct {
+	MBID           string  `json:"mbid"`
+	Name           string  `json:"name"`
+	Disambiguation string  `json:"disambiguation"`
+	Type           *string `json:"type"`
+	Score          int     `json:"score"`
+	Subscribed     bool    `json:"subscribed"`
+}
+
+func toSimilarArtistDTO(s artist.Similar) similarArtistDTO {
+	return similarArtistDTO{
+		MBID:           string(s.MBID),
+		Name:           s.Name,
+		Disambiguation: s.Disambiguation,
+		Type:           nullIfEmpty(s.Type),
+		Score:          s.Score,
+		Subscribed:     s.Subscribed,
+	}
+}
+
 type overridableDTO[T any] struct {
 	Value      T    `json:"value"`
 	Overridden bool `json:"overridden"`

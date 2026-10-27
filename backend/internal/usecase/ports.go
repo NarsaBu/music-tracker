@@ -21,6 +21,19 @@ type MusicCatalog interface {
 	ListReleaseGroups(ctx context.Context, artist domain.MBID) ([]domain.ReleaseGroup, error)
 }
 
+// SimilarArtistsSource finds artists similar to a given one (ListenBrainz).
+type SimilarArtistsSource interface {
+	// SimilarArtists returns the list most similar first; an unknown artist has none.
+	SimilarArtists(ctx context.Context, artist domain.MBID) ([]domain.SimilarArtist, error)
+}
+
+// SimilarArtistsCache keeps the last answer of the source per artist.
+type SimilarArtistsCache interface {
+	// Get returns domain.ErrNotFound when nothing is cached for the artist.
+	Get(ctx context.Context, artist domain.MBID) (items []domain.SimilarArtist, fetchedAt time.Time, err error)
+	Put(ctx context.Context, artist domain.MBID, items []domain.SimilarArtist, at time.Time) error
+}
+
 type ArtistRepository interface {
 	// Upsert stores descriptive fields; sync state (last_synced_at) is left intact.
 	Upsert(ctx context.Context, a domain.Artist) error

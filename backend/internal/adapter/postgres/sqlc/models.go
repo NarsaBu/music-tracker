@@ -486,6 +486,12 @@ type Setting struct {
 	NewReleaseDays         int32
 }
 
+type SimilarArtist struct {
+	ArtistMbid uuid.UUID
+	Items      []byte
+	FetchedAt  time.Time
+}
+
 type Subscription struct {
 	ArtistMbid             uuid.UUID
 	PrimaryTypes           []ReleasePrimaryType
