@@ -182,6 +182,84 @@ func (q *Queries) ListFeed(ctx context.Context, arg ListFeedParams) ([]ListFeedR
 	return items, nil
 }
 
+const listFeedByRelease = `-- name: ListFeedByRelease :many
+SELECT n.id, n.credit_role, n.created_at, rg.mbid, rg.title, rg.primary_type, rg.secondary_types, rg.first_release_date, rg.first_release_on, rg.artist_credit, rg.discovered_at, rg.updated_at, a.mbid, a.name, a.sort_name, a.disambiguation, a.type, a.country, a.last_synced_at, a.created_at
+FROM notifications n
+JOIN release_groups rg ON rg.mbid = n.release_group_mbid
+JOIN artists a ON a.mbid = n.artist_mbid
+WHERE n.channel = 'rss'
+  AND ($1::date IS NULL
+       OR (COALESCE(rg.first_release_on, '0001-01-01'::date), n.id) < ($1, $2::uuid))
+  AND ($3::release_primary_type IS NULL OR rg.primary_type = $3)
+  AND ($4::credit_role IS NULL OR n.credit_role = $4)
+ORDER BY COALESCE(rg.first_release_on, '0001-01-01'::date) DESC, n.id DESC
+LIMIT $5
+`
+
+type ListFeedByReleaseParams struct {
+	BeforeOn    *time.Time
+	BeforeID    uuid.NullUUID
+	PrimaryType NullReleasePrimaryType
+	Role        NullCreditRole
+	Lim         int32
+}
+
+type ListFeedByReleaseRow struct {
+	ID           uuid.UUID
+	CreditRole   CreditRole
+	CreatedAt    time.Time
+	ReleaseGroup ReleaseGroup
+	Artist       Artist
+}
+
+// The same feed by release date, newest first; undated releases go last.
+func (q *Queries) ListFeedByRelease(ctx context.Context, arg ListFeedByReleaseParams) ([]ListFeedByReleaseRow, error) {
+	rows, err := q.db.Query(ctx, listFeedByRelease,
+		arg.BeforeOn,
+		arg.BeforeID,
+		arg.PrimaryType,
+		arg.Role,
+		arg.Lim,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListFeedByReleaseRow
+	for rows.Next() {
+		var i ListFeedByReleaseRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreditRole,
+			&i.CreatedAt,
+			&i.ReleaseGroup.Mbid,
+			&i.ReleaseGroup.Title,
+			&i.ReleaseGroup.PrimaryType,
+			&i.ReleaseGroup.SecondaryTypes,
+			&i.ReleaseGroup.FirstReleaseDate,
+			&i.ReleaseGroup.FirstReleaseOn,
+			&i.ReleaseGroup.ArtistCredit,
+			&i.ReleaseGroup.DiscoveredAt,
+			&i.ReleaseGroup.UpdatedAt,
+			&i.Artist.Mbid,
+			&i.Artist.Name,
+			&i.Artist.SortName,
+			&i.Artist.Disambiguation,
+			&i.Artist.Type,
+			&i.Artist.Country,
+			&i.Artist.LastSyncedAt,
+			&i.Artist.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markNotificationsFailed = `-- name: MarkNotificationsFailed :exec
 UPDATE notifications
 SET attempts   = attempts + 1,

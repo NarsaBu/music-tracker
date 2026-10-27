@@ -113,7 +113,7 @@ func TestSyncArtist_ResubscriptionIsBaseline(t *testing.T) {
 	// Unsubscribed for a while, subscribed again a minute ago.
 	store.Subs[artistA] = domain.Subscription{BaselineAt: now.Add(-time.Minute)}
 	catalog := &fakeCatalog{groups: map[domain.MBID][]domain.ReleaseGroup{
-		artistA: {rg(rg1, "2026-10-01", solo(artistA))},
+		artistA: {rg(rg1, "2025-01-01", solo(artistA))},
 	}}
 
 	res, err := newSyncArtist(store, catalog).Execute(context.Background(), artistA, "")
@@ -121,7 +121,33 @@ func TestSyncArtist_ResubscriptionIsBaseline(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !res.Baseline || res.New != 0 || len(store.Notifs) != 0 {
-		t.Errorf("result = %+v, notifications = %d; a release from the unsubscribed period is history", res, len(store.Notifs))
+		t.Errorf("result = %+v, notifications = %d; an old release from the unsubscribed period is history", res, len(store.Notifs))
+	}
+}
+
+func TestSyncArtist_BaselineNotifiesReleasesInsideStaleWindow(t *testing.T) {
+	store := memory.NewStore()
+	store.Artists[artistA] = domain.Artist{MBID: artistA}
+	store.Subs[artistA] = domain.Subscription{BaselineAt: now.Add(-time.Hour)}
+	// A recent album, an old one, an undated one.
+	catalog := &fakeCatalog{groups: map[domain.MBID][]domain.ReleaseGroup{
+		artistA: {rg(rg1, "2026-10-02", solo(artistA)), rg(rg2, "2024", solo(artistA)), rg(rg3, "", solo(artistA))},
+	}}
+
+	res, err := newSyncArtist(store, catalog).Execute(context.Background(), artistA, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Baseline || res.Discovered != 3 || res.New != 1 {
+		t.Errorf("result = %+v, want 3 discovered, 1 new", res)
+	}
+	for _, l := range store.Links[artistA] {
+		if want := l.ReleaseGroup.MBID != rg1; l.IsBaseline != want {
+			t.Errorf("%s: is_baseline = %v, want %v", l.ReleaseGroup.MBID, l.IsBaseline, want)
+		}
+	}
+	if len(store.Notifs) != 1 || store.Notifs[0].ReleaseGroup != rg1 {
+		t.Errorf("notifications = %+v, want one entry for rg1", store.Notifs)
 	}
 }
 

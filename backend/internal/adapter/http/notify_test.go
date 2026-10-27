@@ -188,11 +188,11 @@ func TestPatchSubscription_OptionalFields(t *testing.T) {
 
 func TestReleases(t *testing.T) {
 	f := &notifyFakes{nextCursor: "abc"}
-	rec := do(newNotifyRouter(f), http.MethodGet, "/api/v1/releases?type=single&role=featured&cursor=xyz&limit=20", "")
+	rec := do(newNotifyRouter(f), http.MethodGet, "/api/v1/releases?type=single&role=featured&cursor=xyz&limit=20&sort=released", "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d", rec.Code)
 	}
-	if f.releasesIn != (notify.ListReleasesInput{Cursor: "xyz", Type: "single", Role: "featured", Limit: 20}) {
+	if f.releasesIn != (notify.ListReleasesInput{Cursor: "xyz", Type: "single", Role: "featured", Sort: "released", Limit: 20}) {
 		t.Errorf("input = %+v", f.releasesIn)
 	}
 	var body struct {

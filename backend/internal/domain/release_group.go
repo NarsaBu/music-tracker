@@ -77,7 +77,7 @@ type ArtistReleaseGroup struct {
 	ArtistMBID   MBID
 	ReleaseGroup ReleaseGroup
 	Role         CreditRole
-	// IsBaseline: found by the first synchronization of the artist, never notified (ADR-3).
+	// IsBaseline: found by the first synchronization of the artist as history, not notified (ADR-3).
 	IsBaseline   bool
 	DiscoveredAt time.Time
 }

@@ -93,6 +93,8 @@ export const ru = {
     count: 'Релизов в ленте',
     type: 'Тип',
     role: 'Роль',
+    sort: 'Порядок',
+    sortOptions: { found: 'По находке', released: 'По выходу' },
     loadFailed: 'Не удалось загрузить ленту',
     emptyFiltered: 'Под этот фильтр ничего не попало.',
     emptyBefore: 'Новинок пока нет. Они появятся здесь, когда у исполнителей из ',

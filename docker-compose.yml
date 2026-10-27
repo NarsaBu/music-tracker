@@ -56,6 +56,11 @@ services:
 
       # MusicBrainz requires a User-Agent with contact info (email or URL).
       MB_USER_AGENT: ${MB_USER_AGENT:?set MB_USER_AGENT}
+      MB_BASE_URL: ${MB_BASE_URL:-https://musicbrainz.org/ws/2}
+      # Where musicbrainz.org is blocked (e.g. RU): route the backend's HTTP
+      # through a proxy, http://, https:// or socks5:// URL. Empty = direct.
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-}
 
       # Cron in UTC; defaults match internal/infrastructure/config.
       SYNC_CRON: ${SYNC_CRON:-0 6 * * *}

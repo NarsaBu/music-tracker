@@ -30,7 +30,7 @@ func NewFanOut(
 }
 
 // Execute returns how many release groups passed the filters. links must be
-// fresh discoveries (not baseline, not stale); unsubscribed artists notify nothing.
+// fresh discoveries (news, not stale); unsubscribed artists notify nothing.
 func (uc *FanOut) Execute(ctx context.Context, artist domain.MBID, links []domain.ArtistReleaseGroup) (int, error) {
 	if len(links) == 0 {
 		return 0, nil

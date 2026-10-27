@@ -93,6 +93,8 @@ export const en: Messages = {
     count: 'Releases in the feed',
     type: 'Type',
     role: 'Role',
+    sort: 'Order',
+    sortOptions: { found: 'By discovery', released: 'By release' },
     loadFailed: 'Could not load the feed',
     emptyFiltered: 'Nothing matches this filter.',
     emptyBefore: 'No new releases yet. They will show up here when artists from the ',

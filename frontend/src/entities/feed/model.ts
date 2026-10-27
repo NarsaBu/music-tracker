@@ -17,9 +17,14 @@ export interface FeedRelease {
   discoveredAt: string;
 }
 
+/** Feed order, newest first: by when it was found or by release date. */
+export type FeedSort = 'found' | 'released';
+export const FEED_SORTS: readonly FeedSort[] = ['found', 'released'];
+
 export interface FeedFilter {
   type: PrimaryType | null;
   role: CreditRole | null;
+  sort: FeedSort;
 }
 
 export interface FeedPage {

@@ -48,6 +48,7 @@ export function createFeedApi(http: HttpClient) {
       if (cursor) params.set('cursor', cursor);
       if (filter.type) params.set('type', filter.type);
       if (filter.role) params.set('role', filter.role);
+      if (filter.sort !== 'found') params.set('sort', filter.sort);
       return http.get(`/api/v1/releases?${params}`, pageSchema);
     },
   };

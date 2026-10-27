@@ -52,7 +52,8 @@ type ListReleasesInput struct {
 	Cursor string // opaque, from a previous page
 	Type   string
 	Role   string
-	Limit  int // 0 = DefaultReleasesLimit
+	Sort   string // "" = usecase.FeedByFound
+	Limit  int    // 0 = DefaultReleasesLimit
 }
 
 type ReleasesPage struct {
@@ -70,9 +71,14 @@ func NewListReleases(notifications usecase.NotificationRepository) *ListReleases
 }
 
 func (uc *ListReleases) Execute(ctx context.Context, in ListReleasesInput) (ReleasesPage, error) {
-	q := usecase.FeedQuery{Type: domain.PrimaryType(in.Type), Role: domain.CreditRole(in.Role), Limit: in.Limit}
+	q := usecase.FeedQuery{
+		Sort: usecase.FeedSort(in.Sort), Type: domain.PrimaryType(in.Type), Role: domain.CreditRole(in.Role), Limit: in.Limit,
+	}
 	if q.Limit == 0 {
 		q.Limit = DefaultReleasesLimit
+	}
+	if q.Sort == "" {
+		q.Sort = usecase.FeedByFound
 	}
 	var fields []domain.FieldError
 	if q.Limit < 1 || q.Limit > MaxReleasesLimit {
@@ -84,8 +90,11 @@ func (uc *ListReleases) Execute(ctx context.Context, in ListReleasesInput) (Rele
 	if q.Role != "" && !slices.Contains(domain.CreditRoles, q.Role) {
 		fields = append(fields, domain.FieldError{Field: "role", Message: fmt.Sprintf("unknown value %q", in.Role)})
 	}
+	if !slices.Contains(usecase.FeedSorts, q.Sort) {
+		fields = append(fields, domain.FieldError{Field: "sort", Message: fmt.Sprintf("unknown value %q", in.Sort)})
+	}
 	if in.Cursor != "" {
-		c, err := decodeCursor(in.Cursor)
+		c, err := decodeCursor(in.Cursor, q.Sort)
 		if err != nil {
 			fields = append(fields, domain.FieldError{Field: "cursor", Message: "invalid"})
 		}
@@ -106,25 +115,41 @@ func (uc *ListReleases) Execute(ctx context.Context, in ListReleasesInput) (Rele
 	if len(items) > want {
 		page.Items = items[:want]
 		last := page.Items[want-1]
-		page.NextCursor = encodeCursor(usecase.FeedCursor{CreatedAt: last.CreatedAt, ID: last.ID})
+		page.NextCursor = encodeCursor(cursorAfter(last, q.Sort), q.Sort)
 	}
 	return page, nil
 }
 
-func encodeCursor(c usecase.FeedCursor) string {
-	raw := strconv.FormatInt(c.CreatedAt.UnixMicro(), 10) + "|" + c.ID
+func cursorAfter(it domain.NotificationItem, sort usecase.FeedSort) usecase.FeedCursor {
+	c := usecase.FeedCursor{At: it.CreatedAt, ID: it.ID}
+	if sort == usecase.FeedByRelease {
+		c.At = time.Time{}
+		if d := it.ReleaseGroup.FirstRelease.Day; d != nil {
+			c.At = *d
+		}
+	}
+	return c
+}
+
+// A cursor carries its sort order: one taken under another order is invalid.
+func encodeCursor(c usecase.FeedCursor, sort usecase.FeedSort) string {
+	raw := string(sort) + "|" + strconv.FormatInt(c.At.UnixMicro(), 10) + "|" + c.ID
 	return base64.RawURLEncoding.EncodeToString([]byte(raw))
 }
 
-func decodeCursor(s string) (*usecase.FeedCursor, error) {
+func decodeCursor(s string, sort usecase.FeedSort) (*usecase.FeedCursor, error) {
 	raw, err := base64.RawURLEncoding.DecodeString(s)
 	if err != nil {
 		return nil, err
 	}
-	at, id, ok := strings.Cut(string(raw), "|")
-	if !ok {
-		return nil, fmt.Errorf("cursor: missing separator")
+	parts := strings.Split(string(raw), "|")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("cursor: malformed")
 	}
+	if usecase.FeedSort(parts[0]) != sort {
+		return nil, fmt.Errorf("cursor: taken under another sort order")
+	}
+	at, id := parts[1], parts[2]
 	micros, err := strconv.ParseInt(at, 10, 64)
 	if err != nil {
 		return nil, err
@@ -132,5 +157,5 @@ func decodeCursor(s string) (*usecase.FeedCursor, error) {
 	if _, err := domain.ParseMBID(id); err != nil { // notification ids are UUIDs too
 		return nil, err
 	}
-	return &usecase.FeedCursor{CreatedAt: time.UnixMicro(micros).UTC(), ID: id}, nil
+	return &usecase.FeedCursor{At: time.UnixMicro(micros).UTC(), ID: id}, nil
 }

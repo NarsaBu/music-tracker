@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FEED_SORTS, type FeedSort } from '@/entities/feed/model';
 import { useFeedQuery } from '@/entities/feed/queries';
 import {
   CREDIT_ROLES,
@@ -36,9 +37,11 @@ export function useReleasesFeedController() {
   const at = (iso: string) => formatDateTime(iso, t.locale);
   const [type, setType] = useState<TypeFilter>('all');
   const [role, setRole] = useState<RoleFilter>('all');
+  const [sort, setSort] = useState<FeedSort>('found');
   const feed = useFeedQuery({
     type: type === 'all' ? null : type,
     role: role === 'all' ? null : role,
+    sort,
   });
 
   const releases = feed.data?.pages.flatMap((p) => p.items) ?? [];
@@ -64,6 +67,7 @@ export function useReleasesFeedController() {
   return {
     type,
     role,
+    sort,
     records,
     isLoading: feed.isPending,
     isError: feed.isError,
@@ -77,6 +81,7 @@ export function useReleasesFeedController() {
       value,
       label: value === 'all' ? t.common.all : t.release.roles[value],
     })),
+    sortOptions: FEED_SORTS.map((value) => ({ value, label: t.feed.sortOptions[value] })),
     lcdText: feed.isPending
       ? LCD_BLANK
       : `${lcdCount(records.length)}${feed.hasNextPage ? '+' : ''}`,
@@ -85,6 +90,7 @@ export function useReleasesFeedController() {
 
     onTypeChange: setType,
     onRoleChange: setRole,
+    onSortChange: setSort,
     onLoadMore: () => void feed.fetchNextPage(),
   };
 }

@@ -16,7 +16,7 @@ FanOutNotifications(sub, rg, role):
   // ON CONFLICT (release_group_mbid, channel): found_via меняется только на роль main
 ```
 
-- Fan-out получает только свежие находки: не baseline и не устаревшие (FR-3.4). Baseline — первая синхронизация исполнителя **или первая после повторной подписки** (`subscriptions.baseline_at > artists.last_synced_at`): релизы, вышедшие, пока подписки не было, не уведомляются.
+- Fan-out получает только свежие находки: не устаревшие (FR-3.4). Baseline — первая синхронизация исполнителя **или первая после повторной подписки** (`subscriptions.baseline_at > artists.last_synced_at`): из найденного в ней уведомляются только релизы с датой внутри окна `SYNC_STALE_DAYS`, остальное — история.
 - `sync_runs.new_releases` — число релиз-групп, прошедших фильтры.
 
 `ReleaseFilter.Matches(rg, role)` (domain):

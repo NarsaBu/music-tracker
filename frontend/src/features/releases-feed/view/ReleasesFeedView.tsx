@@ -39,6 +39,12 @@ export function ReleasesFeedView(vm: ReleasesFeedViewModel) {
             value={vm.role}
             onChange={vm.onRoleChange}
           />
+          <RotarySelector
+            label={t.sort}
+            options={vm.sortOptions}
+            value={vm.sort}
+            onChange={vm.onSortChange}
+          />
         </div>
       </Panel>
 

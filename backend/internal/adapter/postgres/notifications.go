@@ -88,25 +88,42 @@ func (r *NotificationRepository) MarkFailed(ctx context.Context, ids []string, c
 }
 
 func (r *NotificationRepository) ListFeed(ctx context.Context, q usecase.FeedQuery) ([]domain.NotificationItem, error) {
-	p := sqlc.ListFeedParams{
-		PrimaryType: sqlc.NullReleasePrimaryType{ReleasePrimaryType: sqlc.ReleasePrimaryType(q.Type), Valid: q.Type != ""},
-		Role:        sqlc.NullCreditRole{CreditRole: sqlc.CreditRole(q.Role), Valid: q.Role != ""},
-		Lim:         int32(q.Limit), //nolint:gosec // bounded by the use case
-	}
+	primaryType := sqlc.NullReleasePrimaryType{ReleasePrimaryType: sqlc.ReleasePrimaryType(q.Type), Valid: q.Type != ""}
+	role := sqlc.NullCreditRole{CreditRole: sqlc.CreditRole(q.Role), Valid: q.Role != ""}
+	lim := int32(q.Limit) //nolint:gosec // bounded by the use case
+	var (
+		beforeAt *time.Time
+		beforeID uuid.NullUUID
+	)
 	if q.Before != nil {
 		id, err := uuid.Parse(q.Before.ID)
 		if err != nil {
 			return nil, fmt.Errorf("feed cursor: %w", err)
 		}
-		p.BeforeAt, p.BeforeID = &q.Before.CreatedAt, uuid.NullUUID{UUID: id, Valid: true}
+		beforeAt, beforeID = &q.Before.At, uuid.NullUUID{UUID: id, Valid: true}
 	}
-	rows, err := queries(ctx, r.pool).ListFeed(ctx, p)
+
+	var out []domain.NotificationItem
+	if q.Sort == usecase.FeedByRelease {
+		rows, err := queries(ctx, r.pool).ListFeedByRelease(ctx, sqlc.ListFeedByReleaseParams{
+			BeforeOn: beforeAt, BeforeID: beforeID, PrimaryType: primaryType, Role: role, Lim: lim,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list feed: %w", err)
+		}
+		for _, row := range rows {
+			out = append(out, notificationItem(row.ID, row.CreditRole, row.CreatedAt, row.ReleaseGroup, row.Artist))
+		}
+		return out, nil
+	}
+	rows, err := queries(ctx, r.pool).ListFeed(ctx, sqlc.ListFeedParams{
+		BeforeAt: beforeAt, BeforeID: beforeID, PrimaryType: primaryType, Role: role, Lim: lim,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("list feed: %w", err)
 	}
-	out := make([]domain.NotificationItem, len(rows))
-	for i, row := range rows {
-		out[i] = notificationItem(row.ID, row.CreditRole, row.CreatedAt, row.ReleaseGroup, row.Artist)
+	for _, row := range rows {
+		out = append(out, notificationItem(row.ID, row.CreditRole, row.CreatedAt, row.ReleaseGroup, row.Artist))
 	}
 	return out, nil
 }

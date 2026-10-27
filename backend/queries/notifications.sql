@@ -40,3 +40,17 @@ WHERE n.channel = 'rss'
   AND (sqlc.narg(role)::credit_role IS NULL OR n.credit_role = sqlc.narg(role))
 ORDER BY n.created_at DESC, n.id DESC
 LIMIT @lim;
+
+-- The same feed by release date, newest first; undated releases go last.
+-- name: ListFeedByRelease :many
+SELECT n.id, n.credit_role, n.created_at, sqlc.embed(rg), sqlc.embed(a)
+FROM notifications n
+JOIN release_groups rg ON rg.mbid = n.release_group_mbid
+JOIN artists a ON a.mbid = n.artist_mbid
+WHERE n.channel = 'rss'
+  AND (sqlc.narg(before_on)::date IS NULL
+       OR (COALESCE(rg.first_release_on, '0001-01-01'::date), n.id) < (sqlc.narg(before_on), sqlc.narg(before_id)::uuid))
+  AND (sqlc.narg(primary_type)::release_primary_type IS NULL OR rg.primary_type = sqlc.narg(primary_type))
+  AND (sqlc.narg(role)::credit_role IS NULL OR n.credit_role = sqlc.narg(role))
+ORDER BY COALESCE(rg.first_release_on, '0001-01-01'::date) DESC, n.id DESC
+LIMIT @lim;

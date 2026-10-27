@@ -5,6 +5,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -78,8 +79,8 @@ func seedReleases(t *testing.T, at time.Time) {
 		}
 	}
 	rgs := []domain.ReleaseGroup{
-		{MBID: rgOld, Title: "Album", PrimaryType: domain.PrimaryAlbum, ArtistCredit: "Nirvana"},
-		{MBID: rgNew, Title: "Single", PrimaryType: domain.PrimarySingle, ArtistCredit: "Radiohead feat. Nirvana"},
+		{MBID: rgOld, Title: "Album", PrimaryType: domain.PrimaryAlbum, ArtistCredit: "Nirvana", FirstRelease: domain.ParseReleaseDate("1991-09-24")},
+		{MBID: rgNew, Title: "Single", PrimaryType: domain.PrimarySingle, ArtistCredit: "Radiohead feat. Nirvana", FirstRelease: domain.ParseReleaseDate("2026-10")},
 		{MBID: rgNoDay, Title: "EP", PrimaryType: domain.PrimaryEP, ArtistCredit: "Nirvana"},
 	}
 	if err := NewReleaseGroupRepository(testPool).UpsertMany(ctx, rgs, at); err != nil {
@@ -194,10 +195,30 @@ func TestNotificationRepository_FeedPagingAndFilters(t *testing.T) {
 			break
 		}
 		titles = append(titles, page[0].ReleaseGroup.Title)
-		before = &usecase.FeedCursor{CreatedAt: page[0].CreatedAt, ID: page[0].ID}
+		before = &usecase.FeedCursor{At: page[0].CreatedAt, ID: page[0].ID}
 	}
 	if len(titles) != 3 || titles[0] != "EP" {
 		t.Errorf("pages = %v, want 3 items, newest (EP) first", titles)
+	}
+
+	// By release date: newest first, the undated EP last.
+	titles, before = nil, nil
+	for range 5 {
+		page, err := repo.ListFeed(ctx, usecase.FeedQuery{Sort: usecase.FeedByRelease, Limit: 1, Before: before})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(page) == 0 {
+			break
+		}
+		titles = append(titles, page[0].ReleaseGroup.Title)
+		before = &usecase.FeedCursor{ID: page[0].ID}
+		if d := page[0].ReleaseGroup.FirstRelease.Day; d != nil {
+			before.At = *d
+		}
+	}
+	if want := []string{"Single", "Album", "EP"}; !slices.Equal(titles, want) {
+		t.Errorf("pages by release = %v, want %v", titles, want)
 	}
 
 	singles, _ := repo.ListFeed(ctx, usecase.FeedQuery{Limit: 10, Type: domain.PrimarySingle})

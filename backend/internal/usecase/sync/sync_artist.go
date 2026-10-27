@@ -21,7 +21,7 @@ type Config struct {
 type ArtistResult struct {
 	Fetched    int // release groups in the catalog
 	Discovered int // linked to the artist for the first time
-	New        int // discovered, not baseline, not stale, passed the filters: notified
+	New        int // discovered, news (not stale), passed the filters: notified
 	Baseline   bool
 }
 
@@ -33,7 +33,7 @@ type ReleaseNotifier interface {
 
 // Artist fetches an artist's release groups, stores them and links the new
 // ones with the artist's credit role. The first sync of an artist is the baseline:
-// everything it finds is history, not news (ADR-3).
+// what it finds is history, except releases inside the stale window (ADR-3).
 type Artist struct {
 	catalog  usecase.MusicCatalog
 	artists  usecase.ArtistRepository
@@ -92,15 +92,16 @@ func (uc *Artist) Execute(ctx context.Context, mbid domain.MBID, runID string) (
 			continue
 		}
 		known[rg.MBID] = true
+		news := uc.isNews(rg.FirstRelease, res.Baseline, now)
 		link := domain.ArtistReleaseGroup{
 			ArtistMBID:   mbid,
 			ReleaseGroup: rg,
 			Role:         domain.RoleOf(rg.Credits, mbid),
-			IsBaseline:   res.Baseline,
+			IsBaseline:   res.Baseline && !news,
 			DiscoveredAt: now,
 		}
 		links = append(links, link)
-		if !res.Baseline && !rg.FirstRelease.IsStale(now, uc.cfg.StaleThreshold) {
+		if news {
 			fresh = append(fresh, link)
 		}
 	}
@@ -128,6 +129,16 @@ func (uc *Artist) Execute(ctx context.Context, mbid domain.MBID, runID string) (
 		return ArtistResult{}, fmt.Errorf("sync artist %s: store: %w", mbid, err)
 	}
 	return res, nil
+}
+
+// isNews decides whether a discovery goes to fan-out. Outside the baseline that is
+// anything not stale (FR-3.4). The baseline keeps only dated releases inside the
+// stale window: an undated one is as likely to be decades old as an announcement.
+func (uc *Artist) isNews(d domain.ReleaseDate, baseline bool, now time.Time) bool {
+	if baseline && d.Day == nil {
+		return false
+	}
+	return !d.IsStale(now, uc.cfg.StaleThreshold)
 }
 
 // isBaseline: the artist's first sync, or the first one since a re-subscription —

@@ -54,9 +54,9 @@ SyncArtist(mbid, baseline bool):
     upsert release_groups(remote)                     // обновляем title/даты/типы у известных
     for rg in fresh:
         role := domain.RoleOf(rg.ArtistCredit, mbid)   // §5
-        link artist_release_groups(role, is_baseline = baseline)
-        if baseline:                    continue
-        if isStale(rg, now):            continue      // FR-3.4
+        news := !isStale(rg, now) && !(baseline && rg.first_release_on == nil)
+        link artist_release_groups(role, is_baseline = baseline && !news)
+        if !news:                       continue      // FR-3.4
         FanOutNotifications(sub, rg, role)            // фильтры типов и featuring — см. 08-notifications.md
     artists.last_synced_at = now
 ```
@@ -68,7 +68,8 @@ isStale(rg, now):
 
 - `baseline = artists.last_synced_at IS NULL` — первая синхронизация исполнителя в системе.
 - Если исполнитель уже был в системе, а пользователь подписался только что, baseline для него определяется по `subscriptions.baseline_at`: релиз-группы с `artist_release_groups.discovered_at < baseline_at` ему не уведомляются (это естественно — уведомления создаются только в момент обнаружения).
-- Релиз без даты (`first_release_date` пуст) не считается stale — часто это свежедобавленный анонс.
+- Релиз без даты (`first_release_date` пуст) не считается stale — часто это свежедобавленный анонс. В baseline он всё же история: у старых исполнителей недатированных релиз-групп много.
+- В baseline релизы с датой внутри окна `SYNC_STALE_DAYS` уведомляются как обычные находки — лента сразу показывает свежие релизы нового исполнителя.
 - Анонс = `first_release_on > today`. Фильтруется настройкой `notify_announcements` при fan-out.
 
 ### Ошибки и устойчивость

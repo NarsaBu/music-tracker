@@ -3,6 +3,7 @@ package notify
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -326,9 +327,50 @@ func TestListReleases_Paging(t *testing.T) {
 		}
 	}
 
-	for _, in := range []ListReleasesInput{{Cursor: "%%%"}, {Type: "lp"}, {Role: "guest"}, {Limit: 1000}} {
+	for _, in := range []ListReleasesInput{{Cursor: "%%%"}, {Type: "lp"}, {Role: "guest"}, {Limit: 1000}, {Sort: "title"}} {
 		if _, err := uc.Execute(context.Background(), in); !errors.Is(err, domain.ErrValidation) {
 			t.Errorf("%+v: %v, want ErrValidation", in, err)
 		}
+	}
+}
+
+func TestListReleases_SortByRelease(t *testing.T) {
+	s := newStore()
+	// Found in this order; released in another, one undated.
+	for i, date := range []string{"2026-01-15", "", "2026-09", "2025"} {
+		l := link(artistA, i+1, domain.PrimaryAlbum, date, domain.RoleMain)
+		s.Releases[l.ReleaseGroup.MBID] = l.ReleaseGroup
+		uc := NewFanOut(s.SettingsRepo(), s.SubscriptionRepo(), s.NotificationRepo(), &memory.Clock{T: now.Add(time.Duration(i) * time.Minute)})
+		if _, err := uc.Execute(context.Background(), artistA, []domain.ArtistReleaseGroup{l}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	uc := NewListReleases(s.NotificationRepo())
+
+	var seen []domain.MBID
+	cursor := ""
+	for range 5 {
+		res, err := uc.Execute(context.Background(), ListReleasesInput{Sort: "released", Limit: 1, Cursor: cursor})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, it := range res.Items {
+			seen = append(seen, it.ReleaseGroup.MBID)
+		}
+		if cursor = res.NextCursor; cursor == "" {
+			break
+		}
+	}
+	if want := []domain.MBID{rgID(3), rgID(1), rgID(4), rgID(2)}; !slices.Equal(seen, want) {
+		t.Errorf("seen = %v, want %v (newest release first, undated last)", seen, want)
+	}
+
+	// A cursor from one order does not continue another.
+	res, err := uc.Execute(context.Background(), ListReleasesInput{Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := uc.Execute(context.Background(), ListReleasesInput{Sort: "released", Cursor: res.NextCursor}); !errors.Is(err, domain.ErrValidation) {
+		t.Errorf("foreign cursor: %v, want ErrValidation", err)
 	}
 }

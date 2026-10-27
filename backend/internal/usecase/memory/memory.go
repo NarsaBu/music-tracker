@@ -485,15 +485,24 @@ func (r *NotificationRepo) ListFeed(_ context.Context, q usecase.FeedQuery) ([]d
 		rows = append(rows, n)
 	}
 	// Newest first; the id breaks ties like in PostgreSQL.
+	key := func(n StoredNotification) time.Time {
+		if q.Sort != usecase.FeedByRelease {
+			return n.At
+		}
+		if d := r.s.Releases[n.ReleaseGroup].FirstRelease.Day; d != nil {
+			return *d
+		}
+		return time.Time{} // undated last
+	}
 	slices.SortFunc(rows, func(a, b StoredNotification) int {
-		if c := b.At.Compare(a.At); c != 0 {
+		if c := key(b).Compare(key(a)); c != 0 {
 			return c
 		}
 		return strings.Compare(b.ID, a.ID)
 	})
 	var out []domain.NotificationItem
 	for _, n := range rows {
-		if q.Before != nil && (n.At.After(q.Before.CreatedAt) || n.At.Equal(q.Before.CreatedAt) && n.ID >= q.Before.ID) {
+		if q.Before != nil && (key(n).After(q.Before.At) || key(n).Equal(q.Before.At) && n.ID >= q.Before.ID) {
 			continue
 		}
 		if len(out) == q.Limit {

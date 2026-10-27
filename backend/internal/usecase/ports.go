@@ -112,8 +112,20 @@ type SettingsRepository interface {
 	SetDigestTimes(ctx context.Context, last, next *time.Time) error
 }
 
-// FeedQuery selects a page of the release feed, newest first.
+// FeedSort orders the release feed; both orders are newest first.
+type FeedSort string
+
+const (
+	FeedByFound   FeedSort = "found"    // when the release was found
+	FeedByRelease FeedSort = "released" // first release date, undated last
+)
+
+// FeedSorts lists every feed order; the first is the default.
+var FeedSorts = []FeedSort{FeedByFound, FeedByRelease}
+
+// FeedQuery selects a page of the release feed.
 type FeedQuery struct {
+	Sort   FeedSort // "" = FeedByFound
 	Before *FeedCursor
 	Type   domain.PrimaryType // "" = any
 	Role   domain.CreditRole  // "" = any
@@ -122,8 +134,10 @@ type FeedQuery struct {
 
 // FeedCursor is the position after the last item of a page.
 type FeedCursor struct {
-	CreatedAt time.Time
-	ID        string
+	// At is the sort key: the creation time, or the release day for FeedByRelease
+	// (zero for an undated release).
+	At time.Time
+	ID string
 }
 
 type NotificationRepository interface {

@@ -75,7 +75,7 @@ type releasesHandler struct {
 	log    *slog.Logger
 }
 
-// GET /releases?limit=&cursor=&type=&role=
+// GET /releases?limit=&cursor=&type=&role=&sort=
 func (h *releasesHandler) listReleases(w http.ResponseWriter, r *http.Request) {
 	limit, err := queryInt(r, "limit")
 	if err != nil {
@@ -84,7 +84,7 @@ func (h *releasesHandler) listReleases(w http.ResponseWriter, r *http.Request) {
 	}
 	q := r.URL.Query()
 	page, err := h.list.Execute(r.Context(), notify.ListReleasesInput{
-		Cursor: q.Get("cursor"), Type: q.Get("type"), Role: q.Get("role"), Limit: limit,
+		Cursor: q.Get("cursor"), Type: q.Get("type"), Role: q.Get("role"), Sort: q.Get("sort"), Limit: limit,
 	})
 	if err != nil {
 		respondError(h.log, w, r, err)

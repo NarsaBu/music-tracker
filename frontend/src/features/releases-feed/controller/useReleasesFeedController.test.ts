@@ -69,5 +69,9 @@ describe('useReleasesFeedController', () => {
     expect(queries.at(-1)).toContain('type=single');
     await waitFor(() => expect(result.current.isEmpty).toBe(true));
     expect(result.current.filtered).toBe(true);
+    expect(queries.at(-1)).not.toContain('sort=');
+
+    act(() => result.current.onSortChange('released'));
+    await waitFor(() => expect(queries.at(-1)).toContain('sort=released'));
   });
 });
