@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"sync"
-	"time"
 
 	"music-tracker/backend/internal/adapter/email"
 	httpadapter "music-tracker/backend/internal/adapter/http"
@@ -80,9 +79,7 @@ func serve(ctx context.Context) error {
 	}
 
 	fanout := notify.NewFanOut(settings, subs, notifications, clock)
-	syncArtist := syncuc.NewArtist(catalog, artists, subs, releases, runs, fanout, tx, clock, syncuc.Config{
-		StaleThreshold: time.Duration(cfg.Sync.StaleDays) * 24 * time.Hour,
-	})
+	syncArtist := syncuc.NewArtist(catalog, artists, subs, releases, runs, settings, fanout, tx, clock)
 	scheduleDigest := notify.NewScheduleDigest(settings, queue, clock)
 	sendDigest := notify.NewSendDigest(settings, notifications, mailer, tx, clock)
 	settingsCfg := settingsuc.Config{PublicBaseURL: cfg.PublicBaseURL}

@@ -45,6 +45,7 @@ type filtersDTO struct {
 	ExcludedSecondaryTypes []string             `json:"excluded_secondary_types"`
 	IncludeFeatured        bool                 `json:"include_featured"`
 	NotifyAnnouncements    bool                 `json:"notify_announcements"`
+	NewReleaseDays         int                  `json:"new_release_days"`
 }
 
 type emailSettingsDTO struct {
@@ -75,6 +76,7 @@ func toSettingsDTO(v settingsuc.View) settingsDTO {
 			ExcludedSecondaryTypes: nonNilSlice(v.Filter.ExcludedSecondaryTypes),
 			IncludeFeatured:        v.Filter.IncludeFeatured,
 			NotifyAnnouncements:    v.NotifyAnnouncements,
+			NewReleaseDays:         v.NewReleaseDays,
 		},
 		Email: emailSettingsDTO{
 			Enabled: v.Email.Enabled,
@@ -111,6 +113,7 @@ func (d settingsDTO) toInput() (settingsuc.UpdateInput, error) {
 			IncludeFeatured:        d.Filters.IncludeFeatured,
 		},
 		NotifyAnnouncements: d.Filters.NotifyAnnouncements,
+		NewReleaseDays:      d.Filters.NewReleaseDays,
 		Email: domain.EmailSettings{
 			Enabled: d.Email.Enabled,
 			To:      d.Email.To,

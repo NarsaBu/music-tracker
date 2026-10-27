@@ -483,6 +483,7 @@ type Setting struct {
 	NextDigestAt           *time.Time
 	RssEnabled             bool
 	FeedToken              string
+	NewReleaseDays         int32
 }
 
 type Subscription struct {

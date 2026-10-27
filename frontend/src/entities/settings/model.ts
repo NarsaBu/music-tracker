@@ -9,6 +9,8 @@ export interface ReleaseFilterSettings {
   excludedSecondaryTypes: SecondaryType[];
   includeFeatured: boolean;
   notifyAnnouncements: boolean;
+  /** A release older than this many days, found only now, is not news. */
+  newReleaseDays: number;
 }
 
 export interface DigestSettings {
@@ -49,6 +51,7 @@ export const DEFAULT_SETTINGS: Settings = {
     ],
     includeFeatured: false,
     notifyAnnouncements: true,
+    newReleaseDays: 90,
   },
   email: {
     enabled: false,
@@ -61,16 +64,25 @@ export const DEFAULT_SETTINGS: Settings = {
 /** Weekdays in the order of the selector: Monday first. */
 export const WEEKDAYS: readonly Weekday[] = [1, 2, 3, 4, 5, 6, 0];
 
+/** Same bounds as the backend (domain.MinNewReleaseDays…MaxNewReleaseDays). */
+export const NEW_RELEASE_DAYS_MIN = 1;
+export const NEW_RELEASE_DAYS_MAX = 3650;
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Error codes; the view turns them into text. */
 export interface SettingsErrors {
   emailTo?: 'invalid';
+  newReleaseDays?: 'range';
 }
 
 /** Business validation shared by every form that edits Settings. */
 export function validateSettings(s: Settings): SettingsErrors {
   const errors: SettingsErrors = {};
+  const days = s.filters.newReleaseDays;
+  if (!Number.isInteger(days) || days < NEW_RELEASE_DAYS_MIN || days > NEW_RELEASE_DAYS_MAX) {
+    errors.newReleaseDays = 'range';
+  }
   if (s.email.enabled && !EMAIL_RE.test(s.email.to.trim())) {
     errors.emailTo = 'invalid';
   }

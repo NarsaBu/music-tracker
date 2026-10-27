@@ -158,7 +158,8 @@ API открыт для всех, кто достучался до сервер�
     "primary_types": ["album", "ep", "single"],
     "excluded_secondary_types": ["Compilation", "Live"],
     "include_featured": false,
-    "notify_announcements": true
+    "notify_announcements": true,
+    "new_release_days": 90          // 1–3650: релиз старше — не новинка (FR-3.4)
   },
   "email": {
     "enabled": true,

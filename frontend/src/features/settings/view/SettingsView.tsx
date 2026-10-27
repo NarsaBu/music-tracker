@@ -1,5 +1,11 @@
 import { PRIMARY_TYPES, SECONDARY_TYPES } from '@/entities/release/model';
-import { WEEKDAYS, type DigestFrequency, type Weekday } from '@/entities/settings/model';
+import {
+  NEW_RELEASE_DAYS_MAX,
+  NEW_RELEASE_DAYS_MIN,
+  WEEKDAYS,
+  type DigestFrequency,
+  type Weekday,
+} from '@/entities/settings/model';
 import { useI18n } from '@/shared/i18n';
 import {
   EngravedInput,
@@ -69,6 +75,22 @@ export function SettingsView(vm: SettingsViewModel) {
             description={t.announcementsHint}
             checked={s.filters.notifyAnnouncements}
             onChange={vm.onNotifyAnnouncementsChange}
+          />
+          <EngravedInput
+            className={styles.days}
+            label={t.newReleaseDays}
+            hint={t.newReleaseDaysHint}
+            error={
+              errors.newReleaseDays &&
+              t.newReleaseDaysRange(NEW_RELEASE_DAYS_MIN, NEW_RELEASE_DAYS_MAX)
+            }
+            type="number"
+            inputMode="numeric"
+            min={NEW_RELEASE_DAYS_MIN}
+            max={NEW_RELEASE_DAYS_MAX}
+            step={1}
+            value={s.filters.newReleaseDays || ''}
+            onChange={(e) => vm.onNewReleaseDaysChange(e.target.value)}
           />
         </div>
       </Panel>

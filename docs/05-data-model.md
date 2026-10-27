@@ -39,6 +39,7 @@ CREATE TABLE settings (
         '{Compilation,DJ-mix,Interview,Spokenword,Audiobook,Audio drama,Demo,Field recording}',
     include_featured         boolean NOT NULL DEFAULT false,
     notify_announcements     boolean NOT NULL DEFAULT true,
+    new_release_days         int     NOT NULL DEFAULT 90,   -- FR-3.4, 1–3650
     -- email
     email_enabled            boolean NOT NULL DEFAULT false,
     email_to                 text,

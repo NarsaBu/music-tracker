@@ -64,7 +64,6 @@ services:
 
       # Cron in UTC; defaults match internal/infrastructure/config.
       SYNC_CRON: ${SYNC_CRON:-0 6 * * *}
-      SYNC_STALE_DAYS: ${SYNC_STALE_DAYS:-90}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOG_FORMAT: ${LOG_FORMAT:-json}

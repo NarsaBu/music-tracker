@@ -42,6 +42,7 @@ func (uc *Get) Execute(ctx context.Context) (View, error) {
 type UpdateInput struct {
 	Filter              domain.ReleaseFilter
 	NotifyAnnouncements bool
+	NewReleaseDays      int
 	Email               domain.EmailSettings
 	RSSEnabled          bool
 }
@@ -66,6 +67,7 @@ func (uc *Update) Execute(ctx context.Context, in UpdateInput) (View, error) {
 	next := cur
 	next.Filter = in.Filter
 	next.NotifyAnnouncements = in.NotifyAnnouncements
+	next.NewReleaseDays = in.NewReleaseDays
 	next.Email = in.Email
 	next.Email.To = strings.TrimSpace(next.Email.To)
 	next.RSS.Enabled = in.RSSEnabled

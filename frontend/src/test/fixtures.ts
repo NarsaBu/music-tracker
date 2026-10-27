@@ -70,6 +70,7 @@ export function settingsWire(
       excluded_secondary_types: ['Compilation', 'DJ-mix'],
       include_featured: false,
       notify_announcements: true,
+      new_release_days: 90,
     },
     email: {
       enabled: overrides.emailEnabled ?? false,

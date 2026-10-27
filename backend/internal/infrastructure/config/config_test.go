@@ -21,9 +21,6 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.HTTP.Addr != ":8080" {
 		t.Errorf("HTTP.Addr = %q, want :8080", cfg.HTTP.Addr)
 	}
-	if cfg.Sync.StaleDays != 90 {
-		t.Errorf("Sync.StaleDays = %d, want 90", cfg.Sync.StaleDays)
-	}
 }
 
 func TestLoad_Validation(t *testing.T) {

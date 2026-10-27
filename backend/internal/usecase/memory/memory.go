@@ -50,6 +50,7 @@ func NewStore() *Store {
 				ExcludedSecondaryTypes: []string{"Compilation"},
 			},
 			NotifyAnnouncements: true,
+			NewReleaseDays:      90,
 			Email: domain.EmailSettings{Digest: domain.DigestSchedule{
 				Frequency: domain.DigestDaily, Hour: 9, Timezone: "UTC",
 			}},

@@ -84,6 +84,8 @@ export function useSettingsController(initial: SettingsState) {
       }),
     onIncludeFeaturedChange: (v: boolean) => updateFilters({ includeFeatured: v }),
     onNotifyAnnouncementsChange: (v: boolean) => updateFilters({ notifyAnnouncements: v }),
+    // An empty field is 0 and fails validation until a number is typed.
+    onNewReleaseDaysChange: (v: string) => updateFilters({ newReleaseDays: Number(v) }),
 
     onEmailEnabledChange: (v: boolean) => updateEmail({ enabled: v }),
     onEmailToChange: (v: string) => updateEmail({ to: v }),

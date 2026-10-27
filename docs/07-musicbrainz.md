@@ -63,13 +63,13 @@ SyncArtist(mbid, baseline bool):
 
 ```
 isStale(rg, now):
-    rg.first_release_on != nil && rg.first_release_on < now - SYNC_STALE_DAYS
+    rg.first_release_on != nil && rg.first_release_on < now - settings.new_release_days
 ```
 
 - `baseline = artists.last_synced_at IS NULL` — первая синхронизация исполнителя в системе.
 - Если исполнитель уже был в системе, а пользователь подписался только что, baseline для него определяется по `subscriptions.baseline_at`: релиз-группы с `artist_release_groups.discovered_at < baseline_at` ему не уведомляются (это естественно — уведомления создаются только в момент обнаружения).
 - Релиз без даты (`first_release_date` пуст) не считается stale — часто это свежедобавленный анонс. В baseline он всё же история: у старых исполнителей недатированных релиз-групп много.
-- В baseline релизы с датой внутри окна `SYNC_STALE_DAYS` уведомляются как обычные находки — лента сразу показывает свежие релизы нового исполнителя.
+- В baseline релизы с датой внутри окна `settings.new_release_days` уведомляются как обычные находки — лента сразу показывает свежие релизы нового исполнителя.
 - Анонс = `first_release_on > today`. Фильтруется настройкой `notify_announcements` при fan-out.
 
 ### Ошибки и устойчивость

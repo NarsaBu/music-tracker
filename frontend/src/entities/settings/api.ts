@@ -11,6 +11,7 @@ const settingsSchema = z
       excluded_secondary_types: z.array(z.string()),
       include_featured: z.boolean(),
       notify_announcements: z.boolean(),
+      new_release_days: z.number().int(),
     }),
     email: z.object({
       enabled: z.boolean(),
@@ -36,6 +37,7 @@ const settingsSchema = z
         ),
         includeFeatured: filters.include_featured,
         notifyAnnouncements: filters.notify_announcements,
+        newReleaseDays: filters.new_release_days,
       },
       email: {
         enabled: email.enabled,
@@ -55,6 +57,7 @@ function toWire(s: Settings) {
       excluded_secondary_types: s.filters.excludedSecondaryTypes,
       include_featured: s.filters.includeFeatured,
       notify_announcements: s.filters.notifyAnnouncements,
+      new_release_days: s.filters.newReleaseDays,
     },
     email: { enabled: s.email.enabled, to: s.email.to, digest: s.email.digest },
     rss: { enabled: s.rss.enabled },

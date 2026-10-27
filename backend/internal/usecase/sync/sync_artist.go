@@ -13,11 +13,6 @@ import (
 	"music-tracker/backend/internal/usecase"
 )
 
-type Config struct {
-	// StaleThreshold: a release older than this, found only now, is not news (FR-3.4).
-	StaleThreshold time.Duration
-}
-
 type ArtistResult struct {
 	Fetched    int // release groups in the catalog
 	Discovered int // linked to the artist for the first time
@@ -40,10 +35,10 @@ type Artist struct {
 	subs     usecase.SubscriptionRepository
 	releases usecase.ReleaseGroupRepository
 	runs     usecase.SyncRunRepository
+	settings usecase.SettingsRepository
 	notifier ReleaseNotifier
 	tx       usecase.TxManager
 	clock    usecase.Clock
-	cfg      Config
 }
 
 func NewArtist(
@@ -52,14 +47,14 @@ func NewArtist(
 	subs usecase.SubscriptionRepository,
 	releases usecase.ReleaseGroupRepository,
 	runs usecase.SyncRunRepository,
+	settings usecase.SettingsRepository,
 	notifier ReleaseNotifier,
 	tx usecase.TxManager,
 	clock usecase.Clock,
-	cfg Config,
 ) *Artist {
 	return &Artist{
 		catalog: catalog, artists: artists, subs: subs, releases: releases, runs: runs,
-		notifier: notifier, tx: tx, clock: clock, cfg: cfg,
+		settings: settings, notifier: notifier, tx: tx, clock: clock,
 	}
 }
 
@@ -84,6 +79,11 @@ func (uc *Artist) Execute(ctx context.Context, mbid domain.MBID, runID string) (
 	if err != nil {
 		return ArtistResult{}, fmt.Errorf("sync artist %s: %w", mbid, err)
 	}
+	s, err := uc.settings.Get(ctx)
+	if err != nil {
+		return ArtistResult{}, fmt.Errorf("sync artist %s: %w", mbid, err)
+	}
+	stale := s.StaleThreshold()
 
 	now := uc.clock.Now()
 	var links, fresh []domain.ArtistReleaseGroup
@@ -92,7 +92,7 @@ func (uc *Artist) Execute(ctx context.Context, mbid domain.MBID, runID string) (
 			continue
 		}
 		known[rg.MBID] = true
-		news := uc.isNews(rg.FirstRelease, res.Baseline, now)
+		news := isNews(rg.FirstRelease, res.Baseline, now, stale)
 		link := domain.ArtistReleaseGroup{
 			ArtistMBID:   mbid,
 			ReleaseGroup: rg,
@@ -134,11 +134,11 @@ func (uc *Artist) Execute(ctx context.Context, mbid domain.MBID, runID string) (
 // isNews decides whether a discovery goes to fan-out. Outside the baseline that is
 // anything not stale (FR-3.4). The baseline keeps only dated releases inside the
 // stale window: an undated one is as likely to be decades old as an announcement.
-func (uc *Artist) isNews(d domain.ReleaseDate, baseline bool, now time.Time) bool {
+func isNews(d domain.ReleaseDate, baseline bool, now time.Time, stale time.Duration) bool {
 	if baseline && d.Day == nil {
 		return false
 	}
-	return !d.IsStale(now, uc.cfg.StaleThreshold)
+	return !d.IsStale(now, stale)
 }
 
 // isBaseline: the artist's first sync, or the first one since a re-subscription —

@@ -30,7 +30,7 @@ func (q *Queries) GetFilterDefaults(ctx context.Context) (GetFilterDefaultsRow, 
 }
 
 const getSettings = `-- name: GetSettings :one
-SELECT id, primary_types, excluded_secondary_types, include_featured, notify_announcements, email_enabled, email_to, digest_frequency, digest_weekday, digest_time, timezone, last_digest_at, next_digest_at, rss_enabled, feed_token FROM settings WHERE id = 1
+SELECT id, primary_types, excluded_secondary_types, include_featured, notify_announcements, email_enabled, email_to, digest_frequency, digest_weekday, digest_time, timezone, last_digest_at, next_digest_at, rss_enabled, feed_token, new_release_days FROM settings WHERE id = 1
 `
 
 func (q *Queries) GetSettings(ctx context.Context) (Setting, error) {
@@ -52,6 +52,7 @@ func (q *Queries) GetSettings(ctx context.Context) (Setting, error) {
 		&i.NextDigestAt,
 		&i.RssEnabled,
 		&i.FeedToken,
+		&i.NewReleaseDays,
 	)
 	return i, err
 }
@@ -85,14 +86,15 @@ SET primary_types            = $1,
     excluded_secondary_types = $2,
     include_featured         = $3,
     notify_announcements     = $4,
-    email_enabled            = $5,
-    email_to                 = $6,
-    digest_frequency         = $7,
-    digest_weekday           = $8,
-    digest_time              = $9,
-    timezone                 = $10,
-    next_digest_at           = $11,
-    rss_enabled              = $12
+    new_release_days         = $5,
+    email_enabled            = $6,
+    email_to                 = $7,
+    digest_frequency         = $8,
+    digest_weekday           = $9,
+    digest_time              = $10,
+    timezone                 = $11,
+    next_digest_at           = $12,
+    rss_enabled              = $13
 WHERE id = 1
 `
 
@@ -101,6 +103,7 @@ type UpdateSettingsParams struct {
 	ExcludedSecondaryTypes []string
 	IncludeFeatured        bool
 	NotifyAnnouncements    bool
+	NewReleaseDays         int32
 	EmailEnabled           bool
 	EmailTo                pgtype.Text
 	DigestFrequency        DigestFrequency
@@ -117,6 +120,7 @@ func (q *Queries) UpdateSettings(ctx context.Context, arg UpdateSettingsParams) 
 		arg.ExcludedSecondaryTypes,
 		arg.IncludeFeatured,
 		arg.NotifyAnnouncements,
+		arg.NewReleaseDays,
 		arg.EmailEnabled,
 		arg.EmailTo,
 		arg.DigestFrequency,

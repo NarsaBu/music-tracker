@@ -54,6 +54,21 @@ describe('useSettingsController', () => {
     expect(result.current.canSave).toBe(true);
   });
 
+  it('accepts new release days only as a whole number in range', () => {
+    const { result } = renderController();
+
+    for (const v of ['', '0', '3651', '1.5']) {
+      act(() => result.current.onNewReleaseDaysChange(v));
+      expect(result.current.errors.newReleaseDays).toBe('range');
+      expect(result.current.canSave).toBe(false);
+    }
+
+    act(() => result.current.onNewReleaseDaysChange('365'));
+    expect(result.current.settings.filters.newReleaseDays).toBe(365);
+    expect(result.current.errors.newReleaseDays).toBeUndefined();
+    expect(result.current.canSave).toBe(true);
+  });
+
   it('saves to the server and takes the returned schedule', async () => {
     let body: { email: { enabled: boolean; to: string } } | undefined;
     server.use(

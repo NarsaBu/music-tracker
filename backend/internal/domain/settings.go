@@ -11,9 +11,11 @@ import (
 type Settings struct {
 	Filter              ReleaseFilter
 	NotifyAnnouncements bool
-	Email               EmailSettings
-	RSS                 RSSSettings
-	LastDigestAt        *time.Time
+	// NewReleaseDays: a release older than this, found only now, is not news (FR-3.4).
+	NewReleaseDays int
+	Email          EmailSettings
+	RSS            RSSSettings
+	LastDigestAt   *time.Time
 	// NextDigestAt is nil while email is disabled.
 	NextDigestAt *time.Time
 }
@@ -30,12 +32,28 @@ type RSSSettings struct {
 	FeedToken string
 }
 
+// NewReleaseDays bounds; the database checks the same range.
+const (
+	MinNewReleaseDays = 1
+	MaxNewReleaseDays = 3650
+)
+
+// StaleThreshold is NewReleaseDays as a duration.
+func (s Settings) StaleThreshold() time.Duration {
+	return time.Duration(s.NewReleaseDays) * 24 * time.Hour
+}
+
 // EmailActive reports whether digests should be produced at all.
 func (s Settings) EmailActive() bool { return s.Email.Enabled && s.Email.To != "" }
 
 // Validate checks every user-editable field; field names follow PUT /settings.
 func (s Settings) Validate() error {
 	fields := s.Filter.Validate("filters.")
+	if s.NewReleaseDays < MinNewReleaseDays || s.NewReleaseDays > MaxNewReleaseDays {
+		fields = append(fields, FieldError{
+			Field: "filters.new_release_days", Message: fmt.Sprintf("must be between %d and %d", MinNewReleaseDays, MaxNewReleaseDays),
+		})
+	}
 	if s.Email.Enabled || s.Email.To != "" {
 		if _, err := mail.ParseAddress(s.Email.To); err != nil || strings.ContainsAny(s.Email.To, "<> ") {
 			fields = append(fields, FieldError{Field: "email.to", Message: "must be an email address"})

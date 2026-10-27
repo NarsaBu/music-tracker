@@ -52,6 +52,7 @@ func (r *SettingsRepository) Get(ctx context.Context) (domain.Settings, error) {
 			IncludeFeatured:        row.IncludeFeatured,
 		},
 		NotifyAnnouncements: row.NotifyAnnouncements,
+		NewReleaseDays:      int(row.NewReleaseDays),
 		Email: domain.EmailSettings{
 			Enabled: row.EmailEnabled,
 			To:      row.EmailTo.String,
@@ -76,6 +77,7 @@ func (r *SettingsRepository) Save(ctx context.Context, s domain.Settings) error 
 		ExcludedSecondaryTypes: nonNil(s.Filter.ExcludedSecondaryTypes),
 		IncludeFeatured:        s.Filter.IncludeFeatured,
 		NotifyAnnouncements:    s.NotifyAnnouncements,
+		NewReleaseDays:         int32(s.NewReleaseDays), //nolint:gosec // 1–3650, validated
 		EmailEnabled:           s.Email.Enabled,
 		EmailTo:                optionalText(s.Email.To),
 		DigestFrequency:        sqlc.DigestFrequency(d.Frequency),

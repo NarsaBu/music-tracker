@@ -40,7 +40,8 @@ func TestReleaseFilter_Matches(t *testing.T) {
 
 func validSettings() Settings {
 	return Settings{
-		Filter: ReleaseFilter{PrimaryTypes: []PrimaryType{PrimaryAlbum}, ExcludedSecondaryTypes: []string{"Live"}},
+		Filter:         ReleaseFilter{PrimaryTypes: []PrimaryType{PrimaryAlbum}, ExcludedSecondaryTypes: []string{"Live"}},
+		NewReleaseDays: 90,
 		Email: EmailSettings{Enabled: true, To: "me@example.com", Digest: DigestSchedule{
 			Frequency: DigestWeekly, Weekday: time.Friday, Hour: 9, Timezone: "Europe/Moscow",
 		}},
@@ -57,6 +58,8 @@ func TestSettings_Validate(t *testing.T) {
 		field  string
 	}{
 		{"bad primary type", func(s *Settings) { s.Filter.PrimaryTypes = []PrimaryType{"lp"} }, "filters.primary_types[0]"},
+		{"no new release days", func(s *Settings) { s.NewReleaseDays = 0 }, "filters.new_release_days"},
+		{"too many new release days", func(s *Settings) { s.NewReleaseDays = 3651 }, "filters.new_release_days"},
 		{"bad email", func(s *Settings) { s.Email.To = "not-an-email" }, "email.to"},
 		{"display-name email", func(s *Settings) { s.Email.To = "Me <me@example.com>" }, "email.to"},
 		{"empty email while enabled", func(s *Settings) { s.Email.To = "" }, "email.to"},

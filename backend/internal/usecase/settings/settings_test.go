@@ -19,6 +19,7 @@ func input(s *memory.Store) UpdateInput {
 	return UpdateInput{
 		Filter:              s.Settings.Filter,
 		NotifyAnnouncements: true,
+		NewReleaseDays:      s.Settings.NewReleaseDays,
 		Email:               s.Settings.Email,
 		RSSEnabled:          true,
 	}

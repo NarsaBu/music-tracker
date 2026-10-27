@@ -53,7 +53,7 @@ func newSyncArtist(store *memory.Store, catalog *fakeCatalog) *Artist {
 	clock := &memory.Clock{T: now}
 	fanout := notify.NewFanOut(store.SettingsRepo(), store.SubscriptionRepo(), store.NotificationRepo(), clock)
 	return NewArtist(catalog, store.ArtistRepo(), store.SubscriptionRepo(), store.ReleaseRepo(), store.RunRepo(),
-		fanout, memory.TxManager{}, clock, Config{StaleThreshold: 90 * 24 * time.Hour})
+		store.SettingsRepo(), fanout, memory.TxManager{}, clock)
 }
 
 func TestSyncArtist_BaselineThenNews(t *testing.T) {
@@ -148,6 +148,25 @@ func TestSyncArtist_BaselineNotifiesReleasesInsideStaleWindow(t *testing.T) {
 	}
 	if len(store.Notifs) != 1 || store.Notifs[0].ReleaseGroup != rg1 {
 		t.Errorf("notifications = %+v, want one entry for rg1", store.Notifs)
+	}
+}
+
+func TestSyncArtist_NewReleaseDaysFromSettings(t *testing.T) {
+	store := memory.NewStore()
+	store.Settings.NewReleaseDays = 365
+	store.Artists[artistA] = domain.Artist{MBID: artistA}
+	store.Subs[artistA] = domain.Subscription{BaselineAt: now.Add(-time.Hour)}
+	// Half a year old: stale with the 90-day default, news within a year.
+	catalog := &fakeCatalog{groups: map[domain.MBID][]domain.ReleaseGroup{
+		artistA: {rg(rg1, "2026-04-09", solo(artistA))},
+	}}
+
+	res, err := newSyncArtist(store, catalog).Execute(context.Background(), artistA, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.New != 1 || len(store.Notifs) != 1 {
+		t.Errorf("result = %+v, notifications = %d; want the release inside 365 days notified", res, len(store.Notifs))
 	}
 }
 

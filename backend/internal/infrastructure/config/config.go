@@ -42,8 +42,7 @@ type MusicBrainz struct {
 }
 
 type Sync struct {
-	Cron      string `env:"SYNC_CRON" envDefault:"0 6 * * *"`
-	StaleDays int    `env:"SYNC_STALE_DAYS" envDefault:"90"`
+	Cron string `env:"SYNC_CRON" envDefault:"0 6 * * *"`
 }
 
 type SMTP struct {
